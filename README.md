@@ -23,12 +23,18 @@ AI Judge - LLM evaluation system for submissions
    ```
    This will apply the database migration and start local services.
 
-3. **Alternative: Use hosted Supabase**
+3. **Test Edge Functions locally:**
+   ```bash
+   supabase functions serve --env-file .env.local
+   ```
+   This will start the Edge Functions on http://localhost:54321
+
+4. **Alternative: Use hosted Supabase**
    - Create a project at https://supabase.com
    - Copy the migration from `supabase/migrations/001_init.sql`
    - Apply it in the Supabase SQL editor
 
-4. **Start development server:**
+5. **Start development server:**
    ```bash
    pnpm dev
    ```
@@ -73,8 +79,10 @@ ai-judge/
 - T02: Zod schemas for domain types
 - T03: TypeScript type exports
 - T04: Database migration ready
+- T05: Migration applied to hosted Supabase
+- T06: RLS policies enabled
+- T07-T08: Edge Function scaffolds created
 
 🔄 **Next:**
-- T05: Apply migration (requires Docker or hosted Supabase)
-- T06: Enable RLS policies
-- T07+: Edge Functions and React app
+- T09: Test Edge Functions locally
+- T10+: React web app development
