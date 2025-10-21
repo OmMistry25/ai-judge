@@ -6,7 +6,8 @@
   "types": "./src/index.ts",
   "scripts": {
     "type-check": "tsc --noEmit",
-    "lint": "eslint src --ext .ts,.tsx"
+    "lint": "eslint src",
+    "format": "prettier --write src"
   },
   "dependencies": {
     "zod": "^3.22.4"
