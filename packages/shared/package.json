@@ -10,6 +10,7 @@
     "format": "prettier --write src"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.76.0",
     "zod": "^3.22.4"
   },
   "devDependencies": {
