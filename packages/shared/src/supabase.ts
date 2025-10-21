@@ -2,18 +2,33 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
 // Supabase client configuration
-const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
+// These will be provided by the consuming application
+let supabaseUrl = '';
+let supabaseAnonKey = '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+// Function to initialize the client with environment variables
+export function initializeSupabase(url: string, key: string) {
+  supabaseUrl = url;
+  supabaseAnonKey = key;
 }
 
-// Create Supabase client
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Don't throw error here, let the consuming app handle initialization
+  console.warn('Supabase not initialized. Call initializeSupabase() first.');
+}
+
+// Create Supabase client (will be undefined until initialized)
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  : null;
 
 // Test connection function
 export async function testSupabaseConnection() {
+  if (!supabase) {
+    console.error('❌ Supabase not initialized');
+    return false;
+  }
+
   try {
     const { error } = await supabase.from('queues').select('count').limit(1);
     
