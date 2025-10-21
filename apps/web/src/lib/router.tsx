@@ -1,6 +1,6 @@
 import { createRouter, createRoute, createRootRoute } from '@tanstack/react-router';
 import { QueryClient } from '@tanstack/react-query';
-import { ConnectionTest } from '../components/ConnectionTest';
+import { MockConnectionTest } from '../components/MockConnectionTest';
 import { QueueManager } from '../components/QueueManager';
 
 // Create a root route
@@ -39,7 +39,7 @@ const indexRoute = createRoute({
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-4">AI Judge Dashboard</h2>
         <p className="text-gray-600 mb-6">Upload and manage submission queues.</p>
-        <ConnectionTest />
+        <MockConnectionTest />
       </div>
       <QueueManager />
     </div>

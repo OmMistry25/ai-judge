@@ -1,0 +1,33 @@
+{
+  "id": "submission_001",
+  "queueId": "test-queue-id",
+  "labelingTaskId": "task_001",
+  "createdAt": 1704067200000,
+  "questions": [
+    {
+      "rev": 1,
+      "data": {
+        "id": "q_template_1",
+        "questionType": "single_choice_with_reasoning",
+        "questionText": "Is this response helpful and accurate?"
+      }
+    },
+    {
+      "rev": 1,
+      "data": {
+        "id": "q_template_2", 
+        "questionType": "freeform",
+        "questionText": "What is the main issue with this response?"
+      }
+    }
+  ],
+  "answers": {
+    "q_template_1": {
+      "choice": "Yes",
+      "reasoning": "The response is clear and provides accurate information."
+    },
+    "q_template_2": {
+      "reasoning": "The response lacks specific details and could be more comprehensive."
+    }
+  }
+}
