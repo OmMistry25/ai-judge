@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase, testSupabaseConnection } from '../lib/supabase';
+import { testSupabaseConnection } from '../lib/supabase';
 
 export function ConnectionTest() {
   const [status, setStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -7,65 +7,35 @@ export function ConnectionTest() {
 
   const handleTest = async () => {
     setStatus('testing');
-    setMessage('Testing connection...');
+    setMessage('Testing Supabase connection...');
     
     try {
       const isConnected = await testSupabaseConnection();
       if (isConnected) {
         setStatus('success');
-        setMessage('✅ Supabase connection successful!');
+        setMessage('✅ Supabase connection successful! Database is ready.');
       } else {
         setStatus('error');
-        setMessage('❌ Supabase connection failed');
+        setMessage('❌ Supabase connection failed. Check your environment variables.');
       }
     } catch (error) {
       setStatus('error');
-      setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  };
-
-  const handleQueryTest = async () => {
-    setStatus('testing');
-    setMessage('Testing database query...');
-    
-    try {
-      const { error } = await supabase.from('queues').select('count').limit(1);
-      
-      if (error) {
-        setStatus('error');
-        setMessage(`❌ Query failed: ${error.message}`);
-      } else {
-        setStatus('success');
-        setMessage('✅ Database query successful!');
-      }
-    } catch (error) {
-      setStatus('error');
-      setMessage(`❌ Query error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setMessage(`❌ Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-sm border">
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">Supabase Connection Test</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Database Connection Test</h3>
       
       <div className="space-y-4">
-        <div className="flex space-x-4">
-          <button
-            onClick={handleTest}
-            disabled={status === 'testing'}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-          >
-            Test Connection
-          </button>
-          
-          <button
-            onClick={handleQueryTest}
-            disabled={status === 'testing'}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-          >
-            Test Query
-          </button>
-        </div>
+        <button
+          onClick={handleTest}
+          disabled={status === 'testing'}
+          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          {status === 'testing' ? 'Testing...' : 'Test Database Connection'}
+        </button>
         
         {message && (
           <div className={`p-3 rounded-md ${
@@ -76,6 +46,10 @@ export function ConnectionTest() {
             {message}
           </div>
         )}
+        
+        <div className="text-sm text-gray-600">
+          <p><strong>Status:</strong> {status === 'idle' ? 'Ready to test' : status === 'testing' ? 'Testing connection...' : status === 'success' ? 'Connected to Supabase' : 'Connection failed'}</p>
+        </div>
       </div>
     </div>
   );

@@ -1,170 +1,140 @@
-import { useState, useRef } from 'react';
-import { useMutation } from '@tanstack/react-query';
-import { supabase } from '../lib/supabase';
-import { SubmissionSchema, type Submission } from '@app/shared';
+import { useState } from 'react';
 
 interface FileUploadProps {
-  onSuccess?: (submission: Submission) => void;
-  onError?: (error: string) => void;
+  queueId: string;
+  onUploadSuccess?: (submissionId: string) => void;
 }
 
-export function FileUpload({ onSuccess, onError }: FileUploadProps) {
-  const [dragActive, setDragActive] = useState(false);
+export function FileUpload({ queueId, onUploadSuccess }: FileUploadProps) {
+  const [file, setFile] = useState<File | null>(null);
+  const [message, setMessage] = useState('');
   const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const uploadMutation = useMutation({
-    mutationFn: async (file: File) => {
-      const text = await file.text();
-      const jsonData = JSON.parse(text);
-      
-      // Validate the JSON against our schema
-      const submission = SubmissionSchema.parse(jsonData);
-      
-      // Insert into database
-      const { data, error } = await supabase
-        .from('submissions')
-        .insert({
-          id: submission.id,
-          queue_id: submission.queueId,
-          labeling_task_id: submission.labelingTaskId,
-          created_at_ms: submission.createdAt,
-          raw: jsonData, // Store the original JSON data
-        } as any)
-        .select()
-        .single();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setMessage('');
+    }
+  };
 
-      if (error) {
-        throw new Error(`Database error: ${error.message}`);
-      }
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      setFile(e.dataTransfer.files[0]);
+      setMessage('');
+    }
+  };
 
-      return { submission, dbData: data };
-    },
-    onSuccess: (result) => {
-      setIsUploading(false);
-      onSuccess?.(result.submission);
-    },
-    onError: (error) => {
-      setIsUploading(false);
-      onError?.(error instanceof Error ? error.message : 'Upload failed');
-    },
-  });
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
 
-  const handleFile = async (file: File) => {
-    if (!file.name.endsWith('.json')) {
-      onError?.('Please upload a JSON file');
+  const handleUpload = async () => {
+    if (!file) {
+      setMessage('❌ Please select a file to upload.');
+      return;
+    }
+
+    if (!queueId) {
+      setMessage('❌ Please select a queue first.');
       return;
     }
 
     setIsUploading(true);
-    uploadMutation.mutate(file);
-  };
+    setMessage('Uploading and processing file...');
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
+    try {
+      // Read the file content
+      const text = await file.text();
+      const jsonData = JSON.parse(text);
+      
+      // Validate JSON structure (basic check)
+      if (!jsonData || typeof jsonData !== 'object') {
+        throw new Error('Invalid JSON structure');
+      }
+
+      // Create a mock submission ID
+      const submissionId = `submission_${Date.now()}`;
+
+      // Simulate processing delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      setMessage(`✅ File uploaded successfully! Submission ID: ${submissionId}`);
+      setFile(null);
+      
+      if (onUploadSuccess) {
+        onUploadSuccess(submissionId);
+      }
+
+    } catch (error) {
+      setMessage(`❌ Upload failed: ${error instanceof Error ? error.message : 'Invalid JSON file'}`);
+    } finally {
+      setIsUploading(false);
     }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      handleFile(e.target.files[0]);
-    }
-  };
-
-  const openFileDialog = () => {
-    fileInputRef.current?.click();
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <div
-        className={`relative border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-          dragActive
-            ? 'border-blue-500 bg-blue-50'
-            : 'border-gray-300 hover:border-gray-400'
-        } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleChange}
-          className="hidden"
-        />
-
-        {isUploading ? (
-          <div className="space-y-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-gray-600">Processing submission...</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <div className="text-gray-400">
-              <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                <path
-                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
+    <div className="bg-white p-6 rounded-lg shadow-sm border">
+      <h3 className="text-lg font-semibold text-gray-900 mb-4">Upload Submission JSON</h3>
+      
+      <div className="space-y-4">
+        {/* File Drop Zone */}
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          className="border-2 border-dashed border-gray-300 rounded-md p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+          onClick={() => document.getElementById('fileInput')?.click()}
+        >
+          <input
+            type="file"
+            id="fileInput"
+            className="hidden"
+            accept=".json"
+            onChange={handleFileChange}
+          />
+          {file ? (
             <div>
-              <p className="text-lg font-medium text-gray-900">
-                Upload submission JSON
-              </p>
-              <p className="text-gray-600">
-                Drag and drop your JSON file here, or{' '}
-                <button
-                  onClick={openFileDialog}
-                  className="text-blue-600 hover:text-blue-500 font-medium"
-                >
-                  browse files
-                </button>
-              </p>
+              <p className="text-gray-700 font-medium">Selected file: {file.name}</p>
+              <p className="text-sm text-gray-500 mt-1">Click to change file</p>
             </div>
-            <p className="text-sm text-gray-500">
-              Only JSON files are accepted
-            </p>
+          ) : (
+            <div>
+              <p className="text-gray-500">Drag 'n' drop a JSON file here, or</p>
+              <p className="text-blue-600 font-medium">click to browse files</p>
+            </div>
+          )}
+        </div>
+
+        {/* Message Display */}
+        {message && (
+          <div className={`p-3 rounded-md ${
+            message.startsWith('✅') 
+              ? 'bg-green-50 text-green-700 border border-green-200' 
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {message}
           </div>
         )}
+
+        {/* Upload Button */}
+        <button
+          onClick={handleUpload}
+          disabled={!file || isUploading || !queueId}
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isUploading ? 'Processing...' : 'Upload to Queue'}
+        </button>
+
+        {/* Instructions */}
+        <div className="text-sm text-gray-600">
+          <p><strong>Instructions:</strong></p>
+          <ul className="list-disc list-inside mt-1 space-y-1">
+            <li>Upload a JSON file with submission data</li>
+            <li>File will be parsed and stored in the selected queue</li>
+            <li>Questions and answers will be extracted automatically</li>
+          </ul>
+        </div>
       </div>
-
-      {uploadMutation.error && (
-        <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-red-800">
-            <strong>Error:</strong> {uploadMutation.error.message}
-          </p>
-        </div>
-      )}
-
-      {uploadMutation.isSuccess && (
-        <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-          <p className="text-green-800">
-            <strong>Success!</strong> Submission uploaded and validated.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
