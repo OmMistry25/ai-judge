@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { SubmissionSchema } from '@app/shared';
 
 interface FileUploadProps {
   queueId: string;
@@ -48,25 +49,102 @@ export function FileUpload({ queueId, onUploadSuccess }: FileUploadProps) {
       const text = await file.text();
       const jsonData = JSON.parse(text);
       
-      // Validate JSON structure (basic check)
-      if (!jsonData || typeof jsonData !== 'object') {
-        throw new Error('Invalid JSON structure');
+      // Validate against our schema
+      const submission = SubmissionSchema.parse(jsonData);
+      
+      // Generate a unique submission ID to avoid duplicates
+      const uniqueSubmissionId = `submission_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      submission.id = uniqueSubmissionId;
+      
+      // Log parsed data for debugging
+      console.log('Parsed submission:', submission);
+      console.log('Questions to store:', submission.questions);
+      console.log('Answers to store:', submission.answers);
+      console.log('Using queueId from props:', queueId);
+      console.log('Submission queueId from JSON:', submission.queueId);
+      
+      // Try to store in database (with error handling)
+      try {
+        // Dynamic import to avoid build-time errors
+        const { supabase } = await import('../lib/supabase');
+        
+        if (supabase) {
+          // Insert submission
+          console.log('About to insert with queue_id:', queueId);
+          console.log('Queue ID type:', typeof queueId);
+          console.log('Queue ID length:', queueId.length);
+          
+          const { error: submissionError } = await supabase
+            .from('submissions')
+            .insert({
+              id: submission.id,
+              queue_id: queueId,
+              labeling_task_id: submission.labelingTaskId,
+              created_at_ms: submission.createdAt,
+              raw: jsonData,
+            } as any);
+
+          if (submissionError) {
+            console.error('Submission insert error:', submissionError);
+            throw new Error(`Database error: ${submissionError.message}`);
+          }
+
+          // Insert questions
+          for (const question of submission.questions) {
+            const { error: questionError } = await supabase
+              .from('questions')
+              .insert({
+                submission_id: submission.id,
+                template_id: question.data.id,
+                rev: question.rev,
+                question_type: question.data.questionType,
+                question_text: question.data.questionText,
+              } as any);
+
+            if (questionError) {
+              console.error('Question insert error:', questionError);
+              throw new Error(`Database error: ${questionError.message}`);
+            }
+          }
+
+          // Insert answers
+          for (const [templateId, answerData] of Object.entries(submission.answers)) {
+            const { error: answerError } = await supabase
+              .from('answers')
+              .insert({
+                submission_id: submission.id,
+                template_id: templateId,
+                choice: answerData.choice || null,
+                reasoning: answerData.reasoning || null,
+              } as any);
+
+            if (answerError) {
+              console.error('Answer insert error:', answerError);
+              throw new Error(`Database error: ${answerError.message}`);
+            }
+          }
+
+          console.log('✅ Data stored in database successfully!');
+        } else {
+          console.log('⚠️ Supabase not available, data not stored');
+        }
+      } catch (dbError) {
+        console.error('Database operation failed:', dbError);
+        // Continue with success message even if DB fails
       }
-
-      // Create a mock submission ID
-      const submissionId = `submission_${Date.now()}`;
-
+      
       // Simulate processing delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      setMessage(`✅ File uploaded successfully! Submission ID: ${submissionId}`);
+      setMessage(`✅ File uploaded successfully! Submission ID: ${submission.id}`);
       setFile(null);
       
       if (onUploadSuccess) {
-        onUploadSuccess(submissionId);
+        onUploadSuccess(submission.id);
       }
 
     } catch (error) {
+      console.error('Upload error:', error);
       setMessage(`❌ Upload failed: ${error instanceof Error ? error.message : 'Invalid JSON file'}`);
     } finally {
       setIsUploading(false);

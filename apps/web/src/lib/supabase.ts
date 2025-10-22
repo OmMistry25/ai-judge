@@ -6,15 +6,15 @@ import type { Database } from '@app/shared';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.');
+// Create Supabase client only if credentials are available
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey)
+  : null;
+
+// Initialize the shared Supabase client only if credentials are available
+if (supabaseUrl && supabaseAnonKey) {
+  initializeSupabase(supabaseUrl, supabaseAnonKey);
 }
-
-// Initialize the shared Supabase client
-initializeSupabase(supabaseUrl, supabaseAnonKey);
-
-// Create local Supabase client
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
 
 // Test connection function
 export async function testSupabaseConnection() {

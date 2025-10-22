@@ -9,17 +9,50 @@ function App() {
   const [submissions, setSubmissions] = useState<Array<{id: string, queueId: string, uploadedAt: string}>>([]);
   const [message, setMessage] = useState('');
 
-  const handleCreateQueue = () => {
+  const handleCreateQueue = async () => {
     if (queueName.trim()) {
-      const newQueue = {
-        id: `queue_${Date.now()}`,
-        name: queueName.trim(),
-        createdAt: new Date().toISOString()
-      };
-      setQueues(prev => [newQueue, ...prev]);
-      setQueueName('');
-      setMessage(`✅ Queue "${newQueue.name}" created successfully!`);
-      setTimeout(() => setMessage(''), 3000);
+      try {
+        // Generate a proper UUID for the queue
+        const queueId = crypto.randomUUID();
+        
+        // Try to save to database first
+        try {
+          const { supabase } = await import('./lib/supabase');
+          if (supabase) {
+            const { error } = await supabase
+              .from('queues')
+              .insert({
+                id: queueId,
+                name: queueName.trim(),
+              } as any);
+            
+            if (error) {
+              console.error('Database error creating queue:', error);
+              setMessage(`❌ Database error: ${error.message}`);
+              return;
+            }
+            console.log('✅ Queue saved to database:', queueId);
+          }
+        } catch (dbError) {
+          console.error('Database operation failed:', dbError);
+          setMessage(`❌ Database error: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
+          return;
+        }
+        
+        // If database save succeeded, update local state
+        const newQueue = {
+          id: queueId,
+          name: queueName.trim(),
+          createdAt: new Date().toISOString()
+        };
+        setQueues(prev => [newQueue, ...prev]);
+        setQueueName('');
+        setMessage(`✅ Queue "${newQueue.name}" created successfully!`);
+        setTimeout(() => setMessage(''), 3000);
+      } catch (error) {
+        setMessage(`❌ Error creating queue: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        setTimeout(() => setMessage(''), 3000);
+      }
     } else {
       setMessage('❌ Please enter a queue name');
       setTimeout(() => setMessage(''), 3000);

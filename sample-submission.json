@@ -1,6 +1,6 @@
 {
-  "id": "submission_001",
-  "queueId": "test-queue-id",
+  "id": "submission_dynamic",
+  "queueId": "dynamic-queue-id",
   "labelingTaskId": "task_001",
   "createdAt": 1704067200000,
   "questions": [
