@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { FileUpload } from './components/FileUpload';
+import { JudgeForm } from './components/JudgeForm';
+import { JudgeList } from './components/JudgeList';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -8,6 +10,20 @@ function App() {
   const [selectedQueueId, setSelectedQueueId] = useState<string>('');
   const [submissions, setSubmissions] = useState<Array<{id: string, queueId: string, uploadedAt: string}>>([]);
   const [message, setMessage] = useState('');
+  
+  // Judges state
+  const [judges, setJudges] = useState<Array<{
+    id: string;
+    name: string;
+    system_prompt: string;
+    provider: string;
+    model: string;
+    active: boolean;
+    created_at: string;
+  }>>([]);
+  const [showJudgeForm, setShowJudgeForm] = useState(false);
+  const [editingJudge, setEditingJudge] = useState<typeof judges[0] | null>(null);
+  const [judgesLoading, setJudgesLoading] = useState(false);
 
   const handleCreateQueue = async () => {
     if (queueName.trim()) {
@@ -66,6 +82,128 @@ function App() {
       uploadedAt: new Date().toISOString()
     };
     setSubmissions(prev => [newSubmission, ...prev]);
+  };
+
+  // Judge management functions
+  const handleCreateJudge = async (judgeData: {
+    name: string;
+    system_prompt: string;
+    provider: string;
+    model: string;
+    active: boolean;
+  }) => {
+    console.log('Creating new judge with data:', judgeData);
+    setJudgesLoading(true);
+    try {
+      const { supabase } = await import('./lib/supabase');
+      if (supabase) {
+        const { data, error } = await supabase
+          .from('judges')
+          .insert(judgeData as any)
+          .select()
+          .single();
+
+        if (error) {
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        setJudges(prev => [data, ...prev]);
+        setShowJudgeForm(false);
+        setMessage('✅ Judge created successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error creating judge:', error);
+      setMessage(`❌ Error creating judge: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setJudgesLoading(false);
+    }
+  };
+
+  const handleEditJudge = async (judgeData: {
+    name: string;
+    system_prompt: string;
+    provider: string;
+    model: string;
+    active: boolean;
+  }) => {
+    if (!editingJudge) return;
+
+    console.log('Editing judge:', editingJudge.id, 'with data:', judgeData);
+    setJudgesLoading(true);
+    try {
+      const { supabase } = await import('./lib/supabase');
+      if (supabase) {
+        const { error } = await (supabase as any)
+          .from('judges')
+          .update({
+            name: judgeData.name,
+            system_prompt: judgeData.system_prompt,
+            provider: judgeData.provider,
+            model: judgeData.model,
+            active: judgeData.active,
+          })
+          .eq('id', editingJudge.id);
+
+        if (error) {
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        setJudges(prev => prev.map(judge => 
+          judge.id === editingJudge.id 
+            ? { ...judge, ...judgeData }
+            : judge
+        ));
+        setEditingJudge(null);
+        setShowJudgeForm(false);
+        setMessage('✅ Judge updated successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error updating judge:', error);
+      setMessage(`❌ Error updating judge: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setJudgesLoading(false);
+    }
+  };
+
+  const handleDeleteJudge = async (judgeId: string) => {
+    setJudgesLoading(true);
+    try {
+      const { supabase } = await import('./lib/supabase');
+      if (supabase) {
+        const { error } = await supabase
+          .from('judges')
+          .delete()
+          .eq('id', judgeId);
+
+        if (error) {
+          throw new Error(`Database error: ${error.message}`);
+        }
+
+        setJudges(prev => prev.filter(judge => judge.id !== judgeId));
+        setMessage('✅ Judge deleted successfully!');
+        setTimeout(() => setMessage(''), 3000);
+      }
+    } catch (error) {
+      console.error('Error deleting judge:', error);
+      setMessage(`❌ Error deleting judge: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setJudgesLoading(false);
+    }
+  };
+
+  const handleEditJudgeClick = (judge: typeof judges[0]) => {
+    setEditingJudge(judge);
+    setShowJudgeForm(true);
+  };
+
+  const handleCancelJudgeForm = () => {
+    setShowJudgeForm(false);
+    setEditingJudge(null);
   };
 
   return (
@@ -244,9 +382,38 @@ function App() {
           )}
           
           {currentPage === 'judges' && (
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">AI Judges</h2>
-              <p className="text-gray-600">Create and manage AI judges.</p>
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">AI Judges</h2>
+                <p className="text-gray-600 mb-6">Create and manage AI judges for evaluating submissions.</p>
+                
+                {!showJudgeForm && (
+                  <button
+                    onClick={() => setShowJudgeForm(true)}
+                    className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Create New Judge
+                  </button>
+                )}
+              </div>
+
+              {showJudgeForm && (
+                <JudgeForm
+                  judge={editingJudge || undefined}
+                  onSubmit={editingJudge ? handleEditJudge : handleCreateJudge}
+                  onCancel={handleCancelJudgeForm}
+                  isLoading={judgesLoading}
+                />
+              )}
+
+              {!showJudgeForm && (
+                <JudgeList
+                  judges={judges}
+                  onEdit={handleEditJudgeClick}
+                  onDelete={handleDeleteJudge}
+                  isLoading={judgesLoading}
+                />
+              )}
             </div>
           )}
           
