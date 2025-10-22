@@ -2,6 +2,126 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.76.0';
 import { z } from 'https://esm.sh/zod@3.22.4';
 
+// Import our new prompt building functions
+// Note: In a real deployment, these would be imported from the shared package
+// For now, we'll inline the functions to avoid import issues in Deno
+
+function buildSystemPrompt(judge: any): string {
+  let systemPrompt = judge.system_prompt;
+  
+  if (!systemPrompt.toLowerCase().includes('evaluate') && 
+      !systemPrompt.toLowerCase().includes('verdict') &&
+      !systemPrompt.toLowerCase().includes('pass') &&
+      !systemPrompt.toLowerCase().includes('fail')) {
+    
+    systemPrompt += `
+
+You are an AI judge that evaluates answers to questions. Your task is to:
+1. Carefully read the question and the provided answer
+2. Evaluate the answer based on the criteria above
+3. Provide a verdict: "pass", "fail", or "inconclusive"
+4. Give detailed reasoning for your decision
+
+Respond with a JSON object containing:
+- "verdict": either "pass", "fail", or "inconclusive"
+- "reasoning": a detailed explanation of your evaluation
+
+Be objective, fair, and thorough in your evaluation.`;
+  }
+  
+  return systemPrompt;
+}
+
+function buildUserPrompt(context: any): string {
+  const { question, answer } = context;
+  
+  let answerText = '';
+  if (answer.choice && answer.reasoning) {
+    answerText = `Choice: ${answer.choice}\nReasoning: ${answer.reasoning}`;
+  } else if (answer.choice) {
+    answerText = `Choice: ${answer.choice}`;
+  } else if (answer.reasoning) {
+    answerText = `Reasoning: ${answer.reasoning}`;
+  } else {
+    answerText = 'No answer provided';
+  }
+  
+  return `Question: ${question.question_text}
+
+Answer to evaluate:
+${answerText}
+
+Please evaluate this answer and respond with a JSON object containing:
+- "verdict": either "pass", "fail", or "inconclusive"
+- "reasoning": a detailed explanation of your evaluation
+
+Respond only with valid JSON, no additional text.`;
+}
+
+// Enhanced LLM response parser (simplified version for Edge Function)
+function parseLLMResponse(rawResponse: string): {
+  success: boolean;
+  response?: { verdict: string; reasoning: string };
+  error?: string;
+  fallbackUsed?: string;
+} {
+  // Strategy 1: Direct JSON parsing
+  try {
+    const parsed = JSON.parse(rawResponse);
+    if (parsed.verdict && parsed.reasoning) {
+      return { success: true, response: parsed };
+    }
+  } catch (error) {
+    // Strategy 2: Extract JSON from response
+    try {
+      const jsonMatch = rawResponse.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const extracted = JSON.parse(jsonMatch[0]);
+        if (extracted.verdict && extracted.reasoning) {
+          return { success: true, response: extracted, fallbackUsed: 'json-extraction' };
+        }
+      }
+    } catch (extractError) {
+      // Strategy 3: Try to fix common JSON issues
+      try {
+        let fixed = rawResponse
+          .replace(/```json\s*/g, '')
+          .replace(/```\s*/g, '')
+          .replace(/,(\s*[}\]])/g, '$1')
+          .replace(/'/g, '"');
+        
+        const parsed = JSON.parse(fixed);
+        if (parsed.verdict && parsed.reasoning) {
+          return { success: true, response: parsed, fallbackUsed: 'json-fixing' };
+        }
+      } catch (fixError) {
+        // Strategy 4: Parse as text
+        const lowerText = rawResponse.toLowerCase();
+        let verdict: string | null = null;
+        
+        if (lowerText.includes('"pass"') || lowerText.includes('verdict: pass')) {
+          verdict = 'pass';
+        } else if (lowerText.includes('"fail"') || lowerText.includes('verdict: fail')) {
+          verdict = 'fail';
+        } else if (lowerText.includes('"inconclusive"') || lowerText.includes('verdict: inconclusive')) {
+          verdict = 'inconclusive';
+        }
+        
+        if (verdict) {
+          const reasoning = rawResponse.replace(/verdict[:\s]*\w+/gi, '').trim() || 'No reasoning provided';
+          return { 
+            success: true, 
+            response: { verdict, reasoning }, 
+            fallbackUsed: 'text-extraction' 
+          };
+        }
+      }
+    }
+  }
+  
+  return { success: false, error: 'All parsing strategies failed' };
+}
+
 // Request payload schema
 const EvaluateRequestSchema = z.object({
   submissionId: z.string(),
@@ -84,17 +204,16 @@ async function evaluateWithOpenAI(
     
     console.log('🔑 OpenAI API key found:', openaiApiKey.substring(0, 10) + '...');
 
-    // Build the prompt
-    const systemPrompt = judge.system_prompt;
-    const userPrompt = `Question: ${question.question_text}
-
-Answer to evaluate: ${answer.choice || answer.reasoning || 'No answer provided'}
-
-Please evaluate this answer and respond with a JSON object containing:
-- "verdict": either "pass", "fail", or "inconclusive"
-- "reasoning": a detailed explanation of your evaluation
-
-Respond only with valid JSON, no additional text.`;
+    // Build the prompt using our new prompt system
+    const context = {
+      judge,
+      question,
+      answer,
+      submissionId
+    };
+    
+    const systemPrompt = buildSystemPrompt(judge);
+    const userPrompt = buildUserPrompt(context);
 
     console.log('📝 Judge Details:');
     console.log('  - Name:', judge.name);
@@ -152,23 +271,18 @@ Respond only with valid JSON, no additional text.`;
       throw new Error('No response from OpenAI');
     }
 
-    // Parse the AI response
-    let parsedResponse;
-    try {
-      parsedResponse = JSON.parse(aiResponse);
-      console.log('✅ Successfully parsed AI response as JSON');
-    } catch (parseError) {
-      console.log('⚠️ Failed to parse as JSON, trying to extract JSON...');
-      // If JSON parsing fails, try to extract JSON from the response
-      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedResponse = JSON.parse(jsonMatch[0]);
-        console.log('✅ Successfully extracted and parsed JSON from response');
-      } else {
-        console.log('❌ Could not extract JSON from response');
-        throw new Error(`Failed to parse AI response as JSON: ${aiResponse}`);
+      // Parse the AI response using our enhanced parser
+      const parseResult = parseLLMResponse(aiResponse);
+      if (!parseResult.success) {
+        console.log('❌ Failed to parse AI response:', parseResult.error);
+        throw new Error(`Failed to parse AI response: ${parseResult.error}`);
       }
-    }
+      
+      const parsedResponse = parseResult.response;
+      console.log('✅ Successfully parsed AI response');
+      if (parseResult.fallbackUsed) {
+        console.log(`  - Used fallback: ${parseResult.fallbackUsed}`);
+      }
 
     console.log('📊 Parsed AI Response:');
     console.log('  - Verdict:', parsedResponse.verdict);
