@@ -151,6 +151,56 @@ const EvaluateResponseSchema = z.object({
 
 type EvaluateResponse = z.infer<typeof EvaluateResponseSchema>;
 
+// Timeout wrapper for API calls
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operation: string
+): Promise<T> {
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => {
+      reject(new Error(`Timeout: ${operation} exceeded ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  return Promise.race([promise, timeoutPromise]);
+}
+
+// Retry wrapper for JSON parsing
+async function withRetry<T>(
+  operation: () => Promise<T>,
+  maxRetries: number,
+  operationName: string
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 ${operationName} - Attempt ${attempt}/${maxRetries}`);
+      const result = await operation();
+      if (attempt > 1) {
+        console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
+      }
+      return result;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.log(`❌ ${operationName} failed on attempt ${attempt}: ${lastError.message}`);
+      
+      if (attempt === maxRetries) {
+        console.log(`💥 ${operationName} failed after ${maxRetries} attempts`);
+        throw lastError;
+      }
+      
+      // Wait before retry (exponential backoff)
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+      console.log(`⏳ Waiting ${delay}ms before retry...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error(`${operationName} failed after ${maxRetries} attempts`);
+}
+
 // Real OpenAI evaluation function
 async function evaluateWithOpenAI(
   submissionId: string,
@@ -229,28 +279,34 @@ async function evaluateWithOpenAI(
     console.log('  - Choice:', answer.choice);
     console.log('  - Reasoning:', answer.reasoning);
     
-    console.log('🤖 Sending to OpenAI API...');
-    console.log('  - Model:', judge.model || 'gpt-4');
-    console.log('  - System Prompt Length:', systemPrompt.length);
-    console.log('  - User Prompt Length:', userPrompt.length);
+        console.log('🤖 Sending to OpenAI API...');
+        console.log('  - Model:', judge.model || 'gpt-4');
+        console.log('  - System Prompt Length:', systemPrompt.length);
+        console.log('  - User Prompt Length:', userPrompt.length);
+        console.log('  - Timeout: 20 seconds');
+        console.log('  - Retry: Max 1 retry for JSON parsing');
 
-    // Call OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: judge.model || 'gpt-4',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        temperature: 0.1,
-        max_tokens: 1000,
-      }),
-    });
+        // Call OpenAI API with timeout (20 seconds)
+        const openaiResponse = await withTimeout(
+          fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${openaiApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: judge.model || 'gpt-4',
+              messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+              ],
+              temperature: 0.1,
+              max_tokens: 1000,
+            }),
+          }),
+          20000, // 20 second timeout
+          'OpenAI API call'
+        );
 
     if (!openaiResponse.ok) {
       const errorText = await openaiResponse.text();
@@ -271,18 +327,20 @@ async function evaluateWithOpenAI(
       throw new Error('No response from OpenAI');
     }
 
-      // Parse the AI response using our enhanced parser
-      const parseResult = parseLLMResponse(aiResponse);
-      if (!parseResult.success) {
-        console.log('❌ Failed to parse AI response:', parseResult.error);
-        throw new Error(`Failed to parse AI response: ${parseResult.error}`);
-      }
+      // Parse the AI response using retry logic (max 1 retry)
+      const parsedResponse = await withRetry(
+        async () => {
+          const parseResult = parseLLMResponse(aiResponse);
+          if (!parseResult.success) {
+            throw new Error(`Parse failed: ${parseResult.error}`);
+          }
+          return parseResult.response;
+        },
+        2, // max 1 retry (2 total attempts)
+        'JSON parsing'
+      );
       
-      const parsedResponse = parseResult.response;
       console.log('✅ Successfully parsed AI response');
-      if (parseResult.fallbackUsed) {
-        console.log(`  - Used fallback: ${parseResult.fallbackUsed}`);
-      }
 
     console.log('📊 Parsed AI Response:');
     console.log('  - Verdict:', parsedResponse.verdict);
@@ -318,26 +376,32 @@ async function evaluateWithOpenAI(
       latencyMs,
     };
 
-  } catch (error) {
-    const latencyMs = Date.now() - startTime;
-    console.error('❌ OpenAI evaluation error:', error);
-    console.log('  - Error Type:', typeof error);
-    console.log('  - Error Message:', error instanceof Error ? error.message : 'Unknown error');
-    console.log('  - Processing Time:', latencyMs + 'ms');
-    
-    return {
-      id: crypto.randomUUID(),
-      submissionId,
-      templateId,
-      judgeId,
-      verdict: 'inconclusive',
-      reasoning: `Evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      provider: 'openai',
-      model: 'gpt-4',
-      latencyMs,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
-  }
+      } catch (error) {
+        const latencyMs = Date.now() - startTime;
+        console.error('❌ OpenAI evaluation error:', error);
+        console.log('  - Error Type:', typeof error);
+        console.log('  - Error Message:', error instanceof Error ? error.message : 'Unknown error');
+        console.log('  - Processing Time:', latencyMs + 'ms');
+        
+        // Determine if it's a timeout error
+        const isTimeout = error instanceof Error && error.message.includes('Timeout');
+        const errorMessage = isTimeout 
+          ? 'Evaluation timed out after 20 seconds'
+          : `Evaluation failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
+        
+        return {
+          id: crypto.randomUUID(),
+          submissionId,
+          templateId,
+          judgeId,
+          verdict: 'inconclusive',
+          reasoning: errorMessage,
+          provider: 'openai',
+          model: 'gpt-4',
+          latencyMs,
+          error: errorMessage,
+        };
+      }
 }
 
 serve(async (req) => {
