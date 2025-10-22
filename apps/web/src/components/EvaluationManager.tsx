@@ -235,113 +235,40 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
     setMessage(`🚀 Starting evaluation run for ${evaluationPlan.length} evaluations...`);
 
     try {
-      const { supabase } = await import('../lib/supabase');
-      if (!supabase) throw new Error('Supabase not available');
+      // Call the new run-evaluations Edge Function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(`${supabaseUrl}/functions/v1/run-evaluations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          queueId: selectedQueueId,
+          concurrency: 3, // Run 3 evaluations concurrently
+        }),
+      });
 
-      // Create a new run
-      const { data: runData, error: runError } = await (supabase as any)
-        .from('runs')
-        .insert({
-          queue_id: selectedQueueId,
-          planned_count: evaluationPlan.length,
-          completed_count: 0,
-          failed_count: 0,
-        })
-        .select()
-        .single();
-
-      if (runError) throw new Error(`Error creating run: ${runError.message}`);
-
-      const runId = runData.id;
-      let completedCount = 0;
-      let failedCount = 0;
-
-      // Run evaluations sequentially
-      for (const [index, item] of evaluationPlan.entries()) {
-        try {
-          setMessage(`🔄 Running evaluation ${index + 1}/${evaluationPlan.length}...`);
-
-          // Call the real evaluate Edge Function
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const response = await fetch(`${supabaseUrl}/functions/v1/evaluate`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-            },
-            body: JSON.stringify({
-              submissionId: item.submissionId,
-              templateId: item.templateId,
-              judgeId: item.judgeId,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          
-          if (!result.success) {
-            throw new Error(result.error || 'Evaluation failed');
-          }
-
-          // Store evaluation result
-          const { error: evalError } = await (supabase as any)
-            .from('evaluations')
-            .insert({
-              run_id: runId,
-              submission_id: item.submissionId,
-              template_id: item.templateId,
-              judge_id: item.judgeId,
-              verdict: result.evaluation.verdict,
-              reasoning: result.evaluation.reasoning,
-              provider: result.evaluation.provider,
-              model: result.evaluation.model,
-              latency_ms: result.evaluation.latencyMs,
-              error: null,
-            });
-
-          if (evalError) {
-            throw new Error(`Error storing evaluation: ${evalError.message}`);
-          }
-
-          completedCount++;
-        } catch (error) {
-          console.error(`Evaluation failed for ${item.submissionId}/${item.templateId}/${item.judgeId}:`, error);
-          failedCount++;
-
-          // Store failed evaluation
-          await (supabase as any)
-            .from('evaluations')
-            .insert({
-              run_id: runId,
-              submission_id: item.submissionId,
-              template_id: item.templateId,
-              judge_id: item.judgeId,
-              verdict: 'inconclusive',
-              reasoning: 'Evaluation failed',
-              provider: 'system',
-              model: 'error',
-              latency_ms: null,
-              error: error instanceof Error ? error.message : 'Unknown error',
-            });
-        }
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
-      // Update run with final counts
-      await (supabase as any)
-        .from('runs')
-        .update({
-          completed_count: completedCount,
-          failed_count: failedCount,
-        })
-        .eq('id', runId);
+      const result = await response.json();
 
-      setMessage(`✅ Evaluation run completed! ${completedCount} successful, ${failedCount} failed.`);
-      setTimeout(() => setMessage(''), 5000);
+      if (result.success && result.summary) {
+        const { summary } = result;
+        setMessage(
+          `✅ Evaluation run completed! ` +
+          `${summary.successfulEvaluations} successful, ` +
+          `${summary.failedEvaluations} failed. ` +
+          `Average latency: ${summary.averageLatency}ms`
+        );
+        setTimeout(() => setMessage(''), 8000);
+      } else {
+        throw new Error(result.error || 'Unknown error occurred');
+      }
 
-      // Refresh data
+      // Refresh data to show new results
       await fetchQueueData(selectedQueueId);
 
     } catch (error) {

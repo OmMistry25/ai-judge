@@ -5,6 +5,7 @@ import { z } from 'https://esm.sh/zod@3.22.4';
 // Request payload schema
 const RunEvaluationsRequestSchema = z.object({
   queueId: z.string(),
+  concurrency: z.number().min(1).max(10).default(3),
 });
 
 type RunEvaluationsRequest = z.infer<typeof RunEvaluationsRequestSchema>;
@@ -12,16 +13,298 @@ type RunEvaluationsRequest = z.infer<typeof RunEvaluationsRequestSchema>;
 // Response schema
 const RunEvaluationsResponseSchema = z.object({
   success: z.boolean(),
-  runId: z.string().optional(),
-  summary: z.object({
+  run: z.object({
+    id: z.string(),
+    queueId: z.string(),
+    status: z.enum(['running', 'completed', 'failed']),
     planned: z.number(),
     completed: z.number(),
     failed: z.number(),
+    createdAt: z.string(),
+    completedAt: z.string().optional(),
+  }).optional(),
+  summary: z.object({
+    totalEvaluations: z.number(),
+    successfulEvaluations: z.number(),
+    failedEvaluations: z.number(),
+    averageLatency: z.number(),
+    totalDuration: z.number(),
   }).optional(),
   error: z.string().optional(),
 });
 
 type RunEvaluationsResponse = z.infer<typeof RunEvaluationsResponseSchema>;
+
+// Concurrency control
+class ConcurrencyLimiter {
+  private running = 0;
+  private queue: Array<() => Promise<void>> = [];
+
+  constructor(private maxConcurrency: number) {}
+
+  async execute<T>(task: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try {
+          this.running++;
+          const result = await task();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.running--;
+          this.processQueue();
+        }
+      });
+      this.processQueue();
+    });
+  }
+
+  private processQueue() {
+    if (this.running < this.maxConcurrency && this.queue.length > 0) {
+      const task = this.queue.shift();
+      if (task) {
+        task();
+      }
+    }
+  }
+
+  async waitForAll(): Promise<void> {
+    while (this.running > 0 || this.queue.length > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+}
+
+// Main orchestrator function
+async function runEvaluations(
+  queueId: string,
+  concurrency: number,
+  supabase: any
+): Promise<RunEvaluationsResponse> {
+  const startTime = Date.now();
+  
+  try {
+    console.log(`🚀 Starting evaluation run for queue: ${queueId}`);
+    console.log(`⚙️ Concurrency limit: ${concurrency}`);
+
+    // Create a new run record
+    const runId = crypto.randomUUID();
+    const { data: run, error: runError } = await supabase
+      .from('runs')
+      .insert({
+        id: runId,
+        queue_id: queueId,
+        status: 'running',
+        planned: 0,
+        completed: 0,
+        failed: 0,
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (runError || !run) {
+      throw new Error(`Failed to create run: ${runError?.message || 'Unknown error'}`);
+    }
+
+    console.log(`📝 Created run: ${runId}`);
+
+    // Get all submissions for the queue
+    const { data: submissions, error: submissionsError } = await supabase
+      .from('submissions')
+      .select('id')
+      .eq('queue_id', queueId);
+
+    if (submissionsError || !submissions || submissions.length === 0) {
+      throw new Error(`No submissions found for queue: ${queueId}`);
+    }
+
+    console.log(`📊 Found ${submissions.length} submissions`);
+
+    // Get all judge assignments for the queue
+    const { data: assignments, error: assignmentsError } = await supabase
+      .from('judge_assignments')
+      .select(`
+        id,
+        judge_id,
+        template_id,
+        judges!inner(name, provider, model)
+      `)
+      .eq('queue_id', queueId);
+
+    if (assignmentsError || !assignments || assignments.length === 0) {
+      throw new Error(`No judge assignments found for queue: ${queueId}`);
+    }
+
+    console.log(`👥 Found ${assignments.length} judge assignments`);
+
+    // Compute cartesian product: submissions × assignments
+    const evaluationTasks: Array<{
+      submissionId: string;
+      templateId: string;
+      judgeId: string;
+      judgeName: string;
+    }> = [];
+
+    for (const submission of submissions) {
+      for (const assignment of assignments) {
+        evaluationTasks.push({
+          submissionId: submission.id,
+          templateId: assignment.template_id,
+          judgeId: assignment.judge_id,
+          judgeName: assignment.judges.name,
+        });
+      }
+    }
+
+    console.log(`🎯 Planned ${evaluationTasks.length} evaluations`);
+    console.log(`  - ${submissions.length} submissions × ${assignments.length} assignments`);
+
+    // Update run with planned count
+    await supabase
+      .from('runs')
+      .update({ planned: evaluationTasks.length })
+      .eq('id', runId);
+
+    // Track evaluation results
+    let completed = 0;
+    let failed = 0;
+    const latencies: number[] = [];
+    const errors: string[] = [];
+
+    // Create concurrency limiter
+    const limiter = new ConcurrencyLimiter(concurrency);
+
+    // Execute evaluations with concurrency control
+    const evaluationPromises = evaluationTasks.map(async (task, index) => {
+      return limiter.execute(async () => {
+        const taskStartTime = Date.now();
+        console.log(`🔄 Starting evaluation ${index + 1}/${evaluationTasks.length}: ${task.judgeName} on submission ${task.submissionId}`);
+        
+        try {
+          // Call the evaluate Edge Function
+          const evaluateResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/evaluate`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              submissionId: task.submissionId,
+              templateId: task.templateId,
+              judgeId: task.judgeId,
+            }),
+          });
+
+          const result = await evaluateResponse.json();
+          const taskLatency = Date.now() - taskStartTime;
+          latencies.push(taskLatency);
+
+          if (result.success && result.evaluation) {
+            // Store the evaluation result
+            await supabase
+              .from('evaluations')
+              .insert({
+                id: result.evaluation.id,
+                run_id: runId,
+                submission_id: task.submissionId,
+                template_id: task.templateId,
+                judge_id: task.judgeId,
+                verdict: result.evaluation.verdict,
+                reasoning: result.evaluation.reasoning,
+                provider: result.evaluation.provider,
+                model: result.evaluation.model,
+                latency_ms: result.evaluation.latencyMs,
+                error: result.evaluation.error || null,
+                created_at: new Date().toISOString(),
+              });
+
+            completed++;
+            console.log(`✅ Evaluation ${index + 1} completed: ${result.evaluation.verdict} (${taskLatency}ms)`);
+          } else {
+            failed++;
+            const errorMsg = result.error || 'Unknown error';
+            errors.push(errorMsg);
+            console.log(`❌ Evaluation ${index + 1} failed: ${errorMsg}`);
+          }
+        } catch (error) {
+          failed++;
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(errorMsg);
+          console.log(`💥 Evaluation ${index + 1} crashed: ${errorMsg}`);
+        }
+
+        // Update run progress
+        await supabase
+          .from('runs')
+          .update({ 
+            completed,
+            failed,
+            status: (completed + failed) === evaluationTasks.length ? 'completed' : 'running'
+          })
+          .eq('id', runId);
+      });
+    });
+
+    // Wait for all evaluations to complete
+    await Promise.all(evaluationPromises);
+    await limiter.waitForAll();
+
+    const totalDuration = Date.now() - startTime;
+    const averageLatency = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
+
+    // Update final run status
+    const finalStatus = failed === 0 ? 'completed' : (completed > 0 ? 'completed' : 'failed');
+    await supabase
+      .from('runs')
+      .update({ 
+        status: finalStatus,
+        completed_at: new Date().toISOString()
+      })
+      .eq('id', runId);
+
+    console.log(`🎉 Evaluation run completed!`);
+    console.log(`  - Total: ${evaluationTasks.length}`);
+    console.log(`  - Completed: ${completed}`);
+    console.log(`  - Failed: ${failed}`);
+    console.log(`  - Duration: ${totalDuration}ms`);
+    console.log(`  - Average latency: ${Math.round(averageLatency)}ms`);
+
+    if (errors.length > 0) {
+      console.log(`⚠️ Errors encountered: ${errors.slice(0, 5).join(', ')}${errors.length > 5 ? '...' : ''}`);
+    }
+
+    return {
+      success: true,
+      run: {
+        id: runId,
+        queueId,
+        status: finalStatus,
+        planned: evaluationTasks.length,
+        completed,
+        failed,
+        createdAt: run.created_at,
+        completedAt: new Date().toISOString(),
+      },
+      summary: {
+        totalEvaluations: evaluationTasks.length,
+        successfulEvaluations: completed,
+        failedEvaluations: failed,
+        averageLatency: Math.round(averageLatency),
+        totalDuration,
+      },
+    };
+
+  } catch (error) {
+    console.error('💥 Run evaluations error:', error);
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred',
+    };
+  }
+}
 
 serve(async (req) => {
   try {
@@ -52,7 +335,7 @@ serve(async (req) => {
     const body = await req.json();
     const validatedRequest = RunEvaluationsRequestSchema.parse(body);
 
-    console.log('Run evaluations request:', validatedRequest);
+    console.log('🚀 Starting run-evaluations request:', validatedRequest);
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -64,37 +347,17 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Create a new run record
-    const runId = crypto.randomUUID();
-    const { error: runError } = await supabase
-      .from('runs')
-      .insert({
-        id: runId,
-        queue_id: validatedRequest.queueId,
-        planned_count: 0,
-        completed_count: 0,
-        failed_count: 0,
-      });
+    // Run the evaluations
+    const result = await runEvaluations(
+      validatedRequest.queueId,
+      validatedRequest.concurrency,
+      supabase
+    );
 
-    if (runError) {
-      throw new Error(`Failed to create run: ${runError.message}`);
-    }
-
-    // For now, return empty summary (will be implemented in T30)
-    const response: RunEvaluationsResponse = {
-      success: true,
-      runId,
-      summary: {
-        planned: 0,
-        completed: 0,
-        failed: 0,
-      },
-    };
-
-    console.log('Run evaluations response:', response);
+    console.log('✅ Run-evaluations completed:', result.success ? 'SUCCESS' : 'FAILED');
 
     return new Response(
-      JSON.stringify(response),
+      JSON.stringify(result),
       {
         status: 200,
         headers: {
@@ -105,7 +368,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Run evaluations function error:', error);
+    console.error('Run-evaluations function error:', error);
 
     const errorResponse: RunEvaluationsResponse = {
       success: false,
