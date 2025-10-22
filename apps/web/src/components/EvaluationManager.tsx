@@ -1,0 +1,540 @@
+import { useState, useEffect } from 'react';
+
+interface Queue {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+interface Judge {
+  id: string;
+  name: string;
+  system_prompt: string;
+  provider: string;
+  model: string;
+  active: boolean;
+}
+
+interface Assignment {
+  id: string;
+  queue_id: string;
+  template_id: string;
+  judge_id: string;
+  judge?: Judge;
+}
+
+interface Submission {
+  id: string;
+  queue_id: string;
+  labeling_task_id: string;
+  created_at_ms: number;
+}
+
+interface Question {
+  id: string;
+  submission_id: string;
+  template_id: string;
+  rev: number;
+  question_type: string;
+  question_text: string;
+}
+
+interface Answer {
+  id: string;
+  submission_id: string;
+  template_id: string;
+  choice: string | null;
+  reasoning: string | null;
+}
+
+interface Run {
+  id: string;
+  queue_id: string;
+  planned_count: number;
+  completed_count: number;
+  failed_count: number;
+  created_at: string;
+}
+
+interface Evaluation {
+  id: string;
+  run_id: string;
+  submission_id: string;
+  template_id: string;
+  judge_id: string;
+  verdict: 'pass' | 'fail' | 'inconclusive';
+  reasoning: string;
+  provider: string;
+  model: string;
+  latency_ms: number | null;
+  error: string | null;
+  created_at: string;
+  judge?: Judge;
+}
+
+interface EvaluationManagerProps {
+  queues: Queue[];
+  judges: Judge[];
+  assignments: Assignment[];
+}
+
+export function EvaluationManager({ queues, judges, assignments }: EvaluationManagerProps) {
+  const [selectedQueueId, setSelectedQueueId] = useState<string>('');
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [runs, setRuns] = useState<Run[]>([]);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [running, setRunning] = useState(false);
+  const [message, setMessage] = useState('');
+
+  // Fetch data for selected queue
+  const fetchQueueData = async (queueId: string) => {
+    if (!queueId) return;
+    
+    setLoading(true);
+    try {
+      const { supabase } = await import('../lib/supabase');
+      if (supabase) {
+        // Get submissions
+        const { data: submissionsData, error: submissionsError } = await (supabase as any)
+          .from('submissions')
+          .select('*')
+          .eq('queue_id', queueId);
+
+        if (submissionsError) throw new Error(`Error fetching submissions: ${submissionsError.message}`);
+        setSubmissions(submissionsData || []);
+
+        if (!submissionsData || submissionsData.length === 0) {
+          setQuestions([]);
+          setAnswers([]);
+          setRuns([]);
+          setEvaluations([]);
+          return;
+        }
+
+        // Get questions
+        const { data: questionsData, error: questionsError } = await (supabase as any)
+          .from('questions')
+          .select('*')
+          .in('submission_id', submissionsData.map((s: any) => s.id));
+
+        if (questionsError) throw new Error(`Error fetching questions: ${questionsError.message}`);
+        setQuestions(questionsData || []);
+
+        // Get answers
+        const { data: answersData, error: answersError } = await (supabase as any)
+          .from('answers')
+          .select('*')
+          .in('submission_id', submissionsData.map((s: any) => s.id));
+
+        if (answersError) throw new Error(`Error fetching answers: ${answersError.message}`);
+        setAnswers(answersData || []);
+
+        // Get runs
+        const { data: runsData, error: runsError } = await (supabase as any)
+          .from('runs')
+          .select('*')
+          .eq('queue_id', queueId)
+          .order('created_at', { ascending: false });
+
+        if (runsError) throw new Error(`Error fetching runs: ${runsError.message}`);
+        setRuns(runsData || []);
+
+        // Get evaluations
+        const { data: evaluationsData, error: evaluationsError } = await (supabase as any)
+          .from('evaluations')
+          .select(`
+            *,
+            judge:judges(*)
+          `)
+          .in('run_id', (runsData || []).map((r: any) => r.id));
+
+        if (evaluationsError) throw new Error(`Error fetching evaluations: ${evaluationsError.message}`);
+        setEvaluations(evaluationsData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching queue data:', error);
+      setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setMessage(''), 3000);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle queue selection
+  useEffect(() => {
+    if (selectedQueueId) {
+      fetchQueueData(selectedQueueId);
+    } else {
+      setSubmissions([]);
+      setQuestions([]);
+      setAnswers([]);
+      setRuns([]);
+      setEvaluations([]);
+    }
+  }, [selectedQueueId]);
+
+  // Get assignments for selected queue
+  const getQueueAssignments = () => {
+    return assignments.filter(a => a.queue_id === selectedQueueId);
+  };
+
+  // Calculate evaluation plan
+  const getEvaluationPlan = () => {
+    const queueAssignments = getQueueAssignments();
+    const plan: Array<{
+      submissionId: string;
+      templateId: string;
+      judgeId: string;
+      question: Question;
+      answer: Answer | null;
+      judge: Judge;
+    }> = [];
+
+    for (const assignment of queueAssignments) {
+      const judge = judges.find(j => j.id === assignment.judge_id);
+      if (!judge) continue;
+
+      // Find all questions with this template_id
+      const templateQuestions = questions.filter(q => q.template_id === assignment.template_id);
+      
+      for (const question of templateQuestions) {
+        const answer = answers.find(a => 
+          a.submission_id === question.submission_id && 
+          a.template_id === question.template_id
+        ) || null;
+
+        plan.push({
+          submissionId: question.submission_id,
+          templateId: question.template_id,
+          judgeId: assignment.judge_id,
+          question,
+          answer,
+          judge,
+        });
+      }
+    }
+
+    return plan;
+  };
+
+  // Run evaluations
+  const handleRunEvaluations = async () => {
+    if (!selectedQueueId) return;
+
+    const evaluationPlan = getEvaluationPlan();
+    if (evaluationPlan.length === 0) {
+      setMessage('❌ No evaluations to run. Make sure you have assignments and submissions.');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
+
+    setRunning(true);
+    setMessage(`🚀 Starting evaluation run for ${evaluationPlan.length} evaluations...`);
+
+    try {
+      const { supabase } = await import('../lib/supabase');
+      if (!supabase) throw new Error('Supabase not available');
+
+      // Create a new run
+      const { data: runData, error: runError } = await (supabase as any)
+        .from('runs')
+        .insert({
+          queue_id: selectedQueueId,
+          planned_count: evaluationPlan.length,
+          completed_count: 0,
+          failed_count: 0,
+        })
+        .select()
+        .single();
+
+      if (runError) throw new Error(`Error creating run: ${runError.message}`);
+
+      const runId = runData.id;
+      let completedCount = 0;
+      let failedCount = 0;
+
+      // Run evaluations sequentially
+      for (const [index, item] of evaluationPlan.entries()) {
+        try {
+          setMessage(`🔄 Running evaluation ${index + 1}/${evaluationPlan.length}...`);
+
+          // Call the real evaluate Edge Function
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const response = await fetch(`${supabaseUrl}/functions/v1/evaluate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+            },
+            body: JSON.stringify({
+              submissionId: item.submissionId,
+              templateId: item.templateId,
+              judgeId: item.judgeId,
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          const result = await response.json();
+          
+          if (!result.success) {
+            throw new Error(result.error || 'Evaluation failed');
+          }
+
+          // Store evaluation result
+          const { error: evalError } = await (supabase as any)
+            .from('evaluations')
+            .insert({
+              run_id: runId,
+              submission_id: item.submissionId,
+              template_id: item.templateId,
+              judge_id: item.judgeId,
+              verdict: result.evaluation.verdict,
+              reasoning: result.evaluation.reasoning,
+              provider: result.evaluation.provider,
+              model: result.evaluation.model,
+              latency_ms: result.evaluation.latencyMs,
+              error: null,
+            });
+
+          if (evalError) {
+            throw new Error(`Error storing evaluation: ${evalError.message}`);
+          }
+
+          completedCount++;
+        } catch (error) {
+          console.error(`Evaluation failed for ${item.submissionId}/${item.templateId}/${item.judgeId}:`, error);
+          failedCount++;
+
+          // Store failed evaluation
+          await (supabase as any)
+            .from('evaluations')
+            .insert({
+              run_id: runId,
+              submission_id: item.submissionId,
+              template_id: item.templateId,
+              judge_id: item.judgeId,
+              verdict: 'inconclusive',
+              reasoning: 'Evaluation failed',
+              provider: 'system',
+              model: 'error',
+              latency_ms: null,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
+      }
+
+      // Update run with final counts
+      await (supabase as any)
+        .from('runs')
+        .update({
+          completed_count: completedCount,
+          failed_count: failedCount,
+        })
+        .eq('id', runId);
+
+      setMessage(`✅ Evaluation run completed! ${completedCount} successful, ${failedCount} failed.`);
+      setTimeout(() => setMessage(''), 5000);
+
+      // Refresh data
+      await fetchQueueData(selectedQueueId);
+
+    } catch (error) {
+      console.error('Error running evaluations:', error);
+      setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      setTimeout(() => setMessage(''), 5000);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  // Get evaluations for a specific run
+  const getEvaluationsForRun = (runId: string) => {
+    return evaluations.filter(e => e.run_id === runId);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Queue Selection */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Queue for Evaluation</h3>
+        <select
+          value={selectedQueueId}
+          onChange={(e) => setSelectedQueueId(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">Choose a queue...</option>
+          {queues.map((queue) => (
+            <option key={queue.id} value={queue.id}>
+              {queue.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Message Display */}
+      {message && (
+        <div className={`p-3 rounded-md ${
+          message.startsWith('✅') 
+            ? 'bg-green-50 text-green-700 border border-green-200' 
+            : message.startsWith('🚀') || message.startsWith('🔄')
+            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {message}
+        </div>
+      )}
+
+      {/* Evaluation Plan */}
+      {selectedQueueId && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Evaluation Plan</h3>
+          
+          {loading ? (
+            <div className="animate-pulse space-y-4">
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {(() => {
+                const plan = getEvaluationPlan();
+                const queueAssignments = getQueueAssignments();
+                
+                if (queueAssignments.length === 0) {
+                  return (
+                    <p className="text-gray-500">
+                      No judge assignments found for this queue. Go to the Results tab to assign judges to questions.
+                    </p>
+                  );
+                }
+
+                if (plan.length === 0) {
+                  return (
+                    <p className="text-gray-500">
+                      No submissions found in this queue. Upload some submissions first.
+                    </p>
+                  );
+                }
+
+                return (
+                  <>
+                    <div className="bg-blue-50 p-4 rounded-md">
+                      <p className="text-blue-800 font-medium">
+                        Ready to run {plan.length} evaluations
+                      </p>
+                      <p className="text-blue-600 text-sm mt-1">
+                        {queueAssignments.length} judge assignments × {submissions.length} submissions
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={handleRunEvaluations}
+                      disabled={running || plan.length === 0}
+                      className="px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {running ? 'Running Evaluations...' : `Run ${plan.length} Evaluations`}
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Evaluation Runs */}
+      {selectedQueueId && runs.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Evaluation Runs</h3>
+          </div>
+
+          <div className="divide-y divide-gray-200">
+            {runs.map((run) => {
+              const runEvaluations = getEvaluationsForRun(run.id);
+              const passCount = runEvaluations.filter(e => e.verdict === 'pass').length;
+              const failCount = runEvaluations.filter(e => e.verdict === 'fail').length;
+              const inconclusiveCount = runEvaluations.filter(e => e.verdict === 'inconclusive').length;
+
+              return (
+                <div key={run.id} className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900">
+                        Run {run.id.slice(0, 8)}...
+                      </h4>
+                      <p className="text-sm text-gray-500">
+                        {new Date(run.created_at).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">
+                        {run.completed_count}/{run.planned_count} completed
+                      </div>
+                      {run.failed_count > 0 && (
+                        <div className="text-sm text-red-600">
+                          {run.failed_count} failed
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Results Summary */}
+                  {runEvaluations.length > 0 && (
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div className="bg-green-50 p-3 rounded-md text-center">
+                        <div className="text-2xl font-bold text-green-600">{passCount}</div>
+                        <div className="text-sm text-green-700">Pass</div>
+                      </div>
+                      <div className="bg-red-50 p-3 rounded-md text-center">
+                        <div className="text-2xl font-bold text-red-600">{failCount}</div>
+                        <div className="text-sm text-red-700">Fail</div>
+                      </div>
+                      <div className="bg-yellow-50 p-3 rounded-md text-center">
+                        <div className="text-2xl font-bold text-yellow-600">{inconclusiveCount}</div>
+                        <div className="text-sm text-yellow-700">Inconclusive</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Individual Evaluations */}
+                  {runEvaluations.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="font-medium text-gray-700">Individual Results:</h5>
+                      {runEvaluations.map((evaluation) => (
+                        <div key={evaluation.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
+                          <div className="flex items-center space-x-3">
+                            <span className={`px-2 py-1 text-xs rounded-full ${
+                              evaluation.verdict === 'pass' ? 'bg-green-100 text-green-800' :
+                              evaluation.verdict === 'fail' ? 'bg-red-100 text-red-800' :
+                              'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {evaluation.verdict}
+                            </span>
+                            <span className="text-sm font-medium">{evaluation.judge?.name}</span>
+                            <span className="text-xs text-gray-500">
+                              {evaluation.template_id}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {evaluation.latency_ms ? `${evaluation.latency_ms}ms` : 'N/A'}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

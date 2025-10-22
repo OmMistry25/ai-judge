@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { JudgeForm } from './components/JudgeForm';
 import { JudgeList } from './components/JudgeList';
 import { AssignmentManager } from './components/AssignmentManager';
+import { EvaluationManager } from './components/EvaluationManager';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -25,6 +26,15 @@ function App() {
   const [showJudgeForm, setShowJudgeForm] = useState(false);
   const [editingJudge, setEditingJudge] = useState<typeof judges[0] | null>(null);
   const [judgesLoading, setJudgesLoading] = useState(false);
+  
+  // Assignments state
+  const [assignments, setAssignments] = useState<Array<{
+    id: string;
+    queue_id: string;
+    template_id: string;
+    judge_id: string;
+    judge?: typeof judges[0];
+  }>>([]);
 
   const handleCreateQueue = async () => {
     if (queueName.trim()) {
@@ -207,6 +217,35 @@ function App() {
     setEditingJudge(null);
   };
 
+  // Fetch assignments for all queues
+  const fetchAssignments = async () => {
+    try {
+      const { supabase } = await import('./lib/supabase');
+      if (supabase) {
+        const { data: assignmentsData, error } = await (supabase as any)
+          .from('judge_assignments')
+          .select(`
+            *,
+            judge:judges(*)
+          `);
+
+        if (error) {
+          console.error('Error fetching assignments:', error);
+          return;
+        }
+
+        setAssignments(assignmentsData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+    }
+  };
+
+  // Load assignments on component mount
+  useEffect(() => {
+    fetchAssignments();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -245,7 +284,17 @@ function App() {
                     : 'text-gray-700 hover:text-gray-900'
                 }`}
               >
-                Results
+                Assignments
+              </button>
+              <button 
+                onClick={() => setCurrentPage('evaluations')}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'evaluations' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                Evaluations
               </button>
             </div>
           </div>
@@ -428,9 +477,22 @@ function App() {
               <AssignmentManager
                 queues={queues}
                 judges={judges}
-                onAssignmentChange={() => {
-                  // Could refresh data if needed
-                }}
+                onAssignmentChange={fetchAssignments}
+              />
+            </div>
+          )}
+          
+          {currentPage === 'evaluations' && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Run Evaluations</h2>
+                <p className="text-gray-600 mb-6">Execute AI judge evaluations on assigned questions and view results.</p>
+              </div>
+
+              <EvaluationManager
+                queues={queues}
+                judges={judges}
+                assignments={assignments}
               />
             </div>
           )}
