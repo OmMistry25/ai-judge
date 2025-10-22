@@ -257,13 +257,16 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
 
       if (result.success && result.summary) {
         const { summary } = result;
+        const successRate = summary.successRate || 0;
+        const verdictBreakdown = summary.verdictBreakdown || { pass: 0, fail: 0, inconclusive: 0 };
+        
         setMessage(
           `✅ Evaluation run completed! ` +
-          `${summary.successfulEvaluations} successful, ` +
-          `${summary.failedEvaluations} failed. ` +
-          `Average latency: ${summary.averageLatency}ms`
+          `${summary.successfulEvaluations}/${summary.totalEvaluations} successful (${successRate}%). ` +
+          `Pass: ${verdictBreakdown.pass}, Fail: ${verdictBreakdown.fail}, Inconclusive: ${verdictBreakdown.inconclusive}. ` +
+          `Avg latency: ${summary.averageLatency}ms`
         );
-        setTimeout(() => setMessage(''), 8000);
+        setTimeout(() => setMessage(''), 10000);
       } else {
         throw new Error(result.error || 'Unknown error occurred');
       }

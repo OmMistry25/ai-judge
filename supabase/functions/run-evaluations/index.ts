@@ -96,9 +96,9 @@ async function runEvaluations(
         id: runId,
         queue_id: queueId,
         status: 'running',
-        planned: 0,
-        completed: 0,
-        failed: 0,
+        planned_count: 0,
+        completed_count: 0,
+        failed_count: 0,
         created_at: new Date().toISOString(),
       })
       .select()
@@ -164,14 +164,17 @@ async function runEvaluations(
     // Update run with planned count
     await supabase
       .from('runs')
-      .update({ planned: evaluationTasks.length })
+      .update({ planned_count: evaluationTasks.length })
       .eq('id', runId);
 
-    // Track evaluation results
+    // Track evaluation results with detailed metrics
     let completed = 0;
     let failed = 0;
     const latencies: number[] = [];
     const errors: string[] = [];
+    const verdicts: { [key: string]: number } = { pass: 0, fail: 0, inconclusive: 0 };
+    const judgeStats: { [key: string]: { completed: number; failed: number; avgLatency: number } } = {};
+    const startTime = Date.now();
 
     // Create concurrency limiter
     const limiter = new ConcurrencyLimiter(concurrency);
@@ -221,12 +224,32 @@ async function runEvaluations(
               });
 
             completed++;
-            console.log(`✅ Evaluation ${index + 1} completed: ${result.evaluation.verdict} (${taskLatency}ms)`);
+            
+            // Track detailed metrics
+            verdicts[result.evaluation.verdict] = (verdicts[result.evaluation.verdict] || 0) + 1;
+            
+            // Track judge statistics
+            if (!judgeStats[task.judgeName]) {
+              judgeStats[task.judgeName] = { completed: 0, failed: 0, avgLatency: 0 };
+            }
+            judgeStats[task.judgeName].completed++;
+            judgeStats[task.judgeName].avgLatency = 
+              (judgeStats[task.judgeName].avgLatency * (judgeStats[task.judgeName].completed - 1) + taskLatency) / 
+              judgeStats[task.judgeName].completed;
+            
+            console.log(`✅ Evaluation ${index + 1} completed: ${result.evaluation.verdict} (${taskLatency}ms) - ${task.judgeName}`);
           } else {
             failed++;
             const errorMsg = result.error || 'Unknown error';
             errors.push(errorMsg);
-            console.log(`❌ Evaluation ${index + 1} failed: ${errorMsg}`);
+            
+            // Track judge failure stats
+            if (!judgeStats[task.judgeName]) {
+              judgeStats[task.judgeName] = { completed: 0, failed: 0, avgLatency: 0 };
+            }
+            judgeStats[task.judgeName].failed++;
+            
+            console.log(`❌ Evaluation ${index + 1} failed: ${errorMsg} - ${task.judgeName}`);
           }
         } catch (error) {
           failed++;
@@ -239,8 +262,8 @@ async function runEvaluations(
         await supabase
           .from('runs')
           .update({ 
-            completed,
-            failed,
+            completed_count: completed,
+            failed_count: failed,
             status: (completed + failed) === evaluationTasks.length ? 'completed' : 'running'
           })
           .eq('id', runId);
@@ -260,16 +283,31 @@ async function runEvaluations(
       .from('runs')
       .update({ 
         status: finalStatus,
+        completed_count: completed,
+        failed_count: failed,
         completed_at: new Date().toISOString()
       })
       .eq('id', runId);
 
+    // Enhanced summary logging
     console.log(`🎉 Evaluation run completed!`);
-    console.log(`  - Total: ${evaluationTasks.length}`);
-    console.log(`  - Completed: ${completed}`);
+    console.log(`📊 Summary:`);
+    console.log(`  - Total planned: ${evaluationTasks.length}`);
+    console.log(`  - Successfully completed: ${completed}`);
     console.log(`  - Failed: ${failed}`);
-    console.log(`  - Duration: ${totalDuration}ms`);
+    console.log(`  - Success rate: ${Math.round((completed / evaluationTasks.length) * 100)}%`);
+    console.log(`  - Total duration: ${totalDuration}ms`);
     console.log(`  - Average latency: ${Math.round(averageLatency)}ms`);
+    
+    console.log(`📈 Verdict breakdown:`);
+    console.log(`  - Pass: ${verdicts.pass}`);
+    console.log(`  - Fail: ${verdicts.fail}`);
+    console.log(`  - Inconclusive: ${verdicts.inconclusive}`);
+    
+    console.log(`👥 Judge performance:`);
+    Object.entries(judgeStats).forEach(([judgeName, stats]) => {
+      console.log(`  - ${judgeName}: ${stats.completed} completed, ${stats.failed} failed, ${Math.round(stats.avgLatency)}ms avg`);
+    });
 
     if (errors.length > 0) {
       console.log(`⚠️ Errors encountered: ${errors.slice(0, 5).join(', ')}${errors.length > 5 ? '...' : ''}`);
@@ -291,8 +329,21 @@ async function runEvaluations(
         totalEvaluations: evaluationTasks.length,
         successfulEvaluations: completed,
         failedEvaluations: failed,
+        successRate: Math.round((completed / evaluationTasks.length) * 100),
         averageLatency: Math.round(averageLatency),
         totalDuration,
+        verdictBreakdown: {
+          pass: verdicts.pass,
+          fail: verdicts.fail,
+          inconclusive: verdicts.inconclusive,
+        },
+        judgePerformance: Object.entries(judgeStats).map(([judgeName, stats]) => ({
+          judgeName,
+          completed: stats.completed,
+          failed: stats.failed,
+          averageLatency: Math.round(stats.avgLatency),
+        })),
+        errors: errors.slice(0, 10), // Limit to first 10 errors
       },
     };
 
