@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FileUpload } from './components/FileUpload';
 import { JudgeForm } from './components/JudgeForm';
 import { JudgeList } from './components/JudgeList';
+import { AssignmentManager } from './components/AssignmentManager';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -418,9 +419,19 @@ function App() {
           )}
           
           {currentPage === 'results' && (
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">Results</h2>
-              <p className="text-gray-600">View evaluation results and statistics.</p>
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Judge Assignments</h2>
+                <p className="text-gray-600 mb-6">Assign AI judges to evaluate specific questions in your queues.</p>
+              </div>
+
+              <AssignmentManager
+                queues={queues}
+                judges={judges}
+                onAssignmentChange={() => {
+                  // Could refresh data if needed
+                }}
+              />
             </div>
           )}
         </div>
