@@ -73,6 +73,34 @@ Each task is small, testable, and single‑concern. Suggested order.
 - **T41** README: setup, env, trade‑offs, time spent, provider choice, limitations.
 - **T42** Record Loom: ingest → CRUD judges → assign → run → results. Link in README.
 
+## 14. UI/UX Transformation - Design System Foundation
+- **T43** Create design tokens & color palette with semantic color schemes and typography scale.
+- **T44** Implement modern layout system with responsive grid, flexible containers, and layout components.
+- **T45** Build core component library: Button system, Form components, Card components, Badge system, Icon system.
+- **T46** Navigation & header redesign with modern header, sidebar navigation, breadcrumbs, and mobile navigation.
+- **T47** Typography & content hierarchy with proper heading hierarchy, readable body text, and accessibility.
+
+## 15. UI/UX Transformation - Component Enhancement
+- **T48** Form system overhaul with modern layout, input states, validation feedback, form groups, and auto-save.
+- **T49** Table & data display revolution with modern design, interactive features, mobile tables, and data visualization.
+- **T50** Dashboard & analytics UI with grid-based layout, statistics cards, charts integration, and real-time updates.
+- **T51** Modal & overlay system with consistent modal design, drawer components, tooltips, and loading states.
+- **T52** Advanced interactions with drag & drop, keyboard shortcuts, search system, and bulk operations.
+
+## 16. UI/UX Transformation - User Experience Polish
+- **T53** Loading & error states with skeleton screens, progressive loading, error boundaries, and retry mechanisms.
+- **T54** Animation & micro-interactions with page transitions, hover effects, loading animations, and scroll animations.
+- **T55** Mobile-first responsive design with touch-friendly navigation, responsive tables, and gesture support.
+- **T56** Accessibility & inclusive design with screen reader support, keyboard navigation, and WCAG compliance.
+- **T57** Performance & optimization with lazy loading, code splitting, bundle optimization, and performance monitoring.
+
+## 17. UI/UX Transformation - Advanced Features
+- **T58** Theme system with light/dark mode, custom themes, system preference detection, and brand customization.
+- **T59** Advanced data visualization with interactive charts, real-time dashboards, export capabilities, and custom visualizations.
+- **T60** User onboarding & help with welcome tour, contextual help, documentation integration, and progressive disclosure.
+- **T61** Collaboration features with real-time updates, user presence, comments system, and notification system.
+- **T62** Advanced search & filtering with global search, advanced filters, saved searches, and faceted search.
+
 ## Optional bonuses
 - **B01** Attachments pass‑through to provider.
 - **B02** Toggle prompt fields included in evaluation.

@@ -243,6 +243,59 @@ evaluations(
 - Simple deploy or local run.
 - Good fit for “real LLM call + persist” loop.
 
+## Design System & UI Architecture
+
+### Design System Foundation
+- **Design Tokens**: Centralized design decisions for colors, typography, spacing, shadows, and borders
+- **Color Palette**: Semantic color schemes (primary, secondary, success, warning, error, info) with light/dark variants
+- **Typography Scale**: Consistent heading hierarchy (H1-H6), body text, captions, and code blocks
+- **Spacing System**: Harmonious spacing scale for margins, padding, and gaps
+- **Component Library**: Reusable atomic components (Button, Input, Card, Badge, Icon)
+
+### Layout System
+- **Responsive Grid**: CSS Grid-based layout system with flexible breakpoints
+- **Container System**: Max-width containers with proper padding and margins
+- **Layout Components**: Header, Sidebar, Main, Footer with consistent spacing
+- **Mobile-First**: Responsive design starting from mobile devices
+
+### Component Architecture
+```
+src/
+├── design-system/
+│   ├── tokens/
+│   │   ├── colors.ts          # Color palette and semantic tokens
+│   │   ├── typography.ts      # Font families, sizes, weights
+│   │   ├── spacing.ts         # Spacing scale and utilities
+│   │   ├── shadows.ts         # Shadow definitions
+│   │   └── borders.ts         # Border radius and styles
+│   ├── components/
+│   │   ├── Button/            # Button variants and states
+│   │   ├── Input/             # Form input components
+│   │   ├── Card/              # Card layouts and variants
+│   │   ├── Badge/             # Status and count badges
+│   │   ├── Modal/             # Modal and overlay system
+│   │   └── Table/             # Data table components
+│   └── layouts/
+│       ├── Header/            # Navigation and header
+│       ├── Sidebar/           # Sidebar navigation
+│       ├── Dashboard/         # Dashboard layouts
+│       └── Mobile/            # Mobile-specific layouts
+```
+
+### UI/UX Principles
+- **Accessibility First**: WCAG AA compliance with proper ARIA labels and keyboard navigation
+- **Mobile-First**: Touch-friendly interfaces with proper sizing and gestures
+- **Performance**: Optimized loading with lazy loading and code splitting
+- **Consistency**: Unified design language across all components
+- **Usability**: Intuitive navigation and clear visual hierarchy
+
+### Advanced Features
+- **Theme System**: Light/dark mode with custom theme support
+- **Animation**: Smooth transitions and micro-interactions
+- **Data Visualization**: Charts and graphs for analytics
+- **Collaboration**: Real-time updates and user presence
+- **Search**: Global and contextual search capabilities
+
 ## Cursor Setup Notes
 - Open the repo in Cursor.
 - Create tasks from `tasks.md` one by one.
