@@ -4,6 +4,7 @@ import { JudgeForm } from './components/JudgeForm';
 import { JudgeList } from './components/JudgeList';
 import { AssignmentManager } from './components/AssignmentManager';
 import { EvaluationManager } from './components/EvaluationManager';
+import { ResultsPage } from './components/ResultsPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -277,9 +278,9 @@ function App() {
                 Judges
               </button>
               <button 
-                onClick={() => setCurrentPage('results')}
+                onClick={() => setCurrentPage('assignments')}
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  currentPage === 'results' 
+                  currentPage === 'assignments' 
                     ? 'bg-blue-100 text-blue-700' 
                     : 'text-gray-700 hover:text-gray-900'
                 }`}
@@ -295,6 +296,16 @@ function App() {
                 }`}
               >
                 Evaluations
+              </button>
+              <button 
+                onClick={() => setCurrentPage('results')}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'results' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-700 hover:text-gray-900'
+                }`}
+              >
+                Results
               </button>
             </div>
           </div>
@@ -495,7 +506,7 @@ function App() {
             </div>
           )}
           
-          {currentPage === 'results' && (
+          {currentPage === 'assignments' && (
             <div className="space-y-8">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-4">Judge Assignments</h2>
@@ -507,6 +518,17 @@ function App() {
                 judges={judges}
                 onAssignmentChange={fetchAssignments}
               />
+            </div>
+          )}
+          
+          {currentPage === 'results' && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Evaluation Results</h2>
+                <p className="text-gray-600 mb-6">View all evaluation results across all queues with detailed analysis.</p>
+              </div>
+
+              <ResultsPage />
             </div>
           )}
           
