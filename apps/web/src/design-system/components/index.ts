@@ -37,3 +37,7 @@ export * from './FormValidation';
 // Table & Data Display Components
 export * from './Table';
 export * from './DataVisualization';
+
+// Dashboard & Analytics Components
+export * from './Dashboard';
+export * from './Analytics';
