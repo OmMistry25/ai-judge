@@ -67,7 +67,6 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
           .select(`
             *,
             judge:judges(*),
-            question:questions(*),
             submission:submissions(*)
           `)
           .order('created_at', { ascending: false });
@@ -76,11 +75,26 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
           throw new Error(fetchError.message);
         }
 
-        setEvaluations(data || []);
-        setFilteredEvaluations(data || []);
+        // Fetch questions separately to match by template_id
+        const { data: questionsData, error: questionsError } = await (supabase as any)
+          .from('questions')
+          .select('*');
+
+        if (questionsError) {
+          throw new Error(`Error fetching questions: ${questionsError.message}`);
+        }
+
+        // Combine evaluations with questions
+        const evaluationsWithQuestions = (data || []).map((evaluation: any) => ({
+          ...evaluation,
+          question: questionsData?.find((q: any) => q.template_id === evaluation.template_id) || null
+        }));
+
+        setEvaluations(evaluationsWithQuestions);
+        setFilteredEvaluations(evaluationsWithQuestions);
         
         // Verify pass rate calculations after data loads
-        if (data && data.length > 0) {
+        if (evaluationsWithQuestions && evaluationsWithQuestions.length > 0) {
           setTimeout(() => {
             verifyPassRateCalculations();
           }, 100);

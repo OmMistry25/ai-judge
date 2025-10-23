@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { StateHandler } from './StateHandler';
 
 interface Queue {
   id: string;
@@ -43,6 +44,7 @@ export function AssignmentManager({ queues, judges, onAssignmentChange }: Assign
   const [questions, setQuestions] = useState<Question[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState('');
 
   // Fetch questions for selected queue
@@ -50,6 +52,7 @@ export function AssignmentManager({ queues, judges, onAssignmentChange }: Assign
     if (!queueId) return;
     
     setLoading(true);
+    setError(null);
     try {
       const { supabase } = await import('../lib/supabase');
       if (supabase) {
@@ -98,6 +101,7 @@ export function AssignmentManager({ queues, judges, onAssignmentChange }: Assign
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      setError(error instanceof Error ? error.message : 'Unknown error');
       setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setTimeout(() => setMessage(''), 3000);
     } finally {
@@ -218,20 +222,31 @@ export function AssignmentManager({ queues, judges, onAssignmentChange }: Assign
         </select>
       </div>
 
-      {/* Message Display */}
-      {message && (
-        <div className={`p-3 rounded-md ${
-          message.startsWith('✅') 
-            ? 'bg-green-50 text-green-700 border border-green-200' 
-            : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message}
-        </div>
-      )}
+      <StateHandler
+        loading={loading}
+        error={error}
+        empty={!!(selectedQueueId && questions.length === 0 && !loading)}
+        emptyMessage="No questions found in this queue. Upload submissions first."
+        emptyIcon="❓"
+        emptyAction={{
+          label: 'Go to Queues',
+          onClick: () => window.location.href = '#queues'
+        }}
+      >
+        {/* Message Display */}
+        {message && (
+          <div className={`p-3 rounded-md ${
+            message.startsWith('✅') 
+              ? 'bg-green-50 text-green-700 border border-green-200' 
+              : 'bg-red-50 text-red-700 border border-red-200'
+          }`}>
+            {message}
+          </div>
+        )}
 
-      {/* Questions and Assignments */}
-      {selectedQueueId && (
-        <div className="bg-white rounded-lg shadow-sm border">
+        {/* Questions and Assignments */}
+        {selectedQueueId && (
+          <div className="bg-white rounded-lg shadow-sm border">
           <div className="px-6 py-4 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">
               Questions & Judge Assignments
@@ -340,8 +355,9 @@ export function AssignmentManager({ queues, judges, onAssignmentChange }: Assign
               })}
             </div>
           )}
-        </div>
-      )}
+          </div>
+        )}
+      </StateHandler>
     </div>
   );
 }

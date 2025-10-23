@@ -13,6 +13,7 @@ function App() {
   const [selectedQueueId, setSelectedQueueId] = useState<string>('');
   const [submissions, setSubmissions] = useState<Array<{id: string, queueId: string, uploadedAt: string}>>([]);
   const [message, setMessage] = useState('');
+  const [globalError, setGlobalError] = useState<string | null>(null);
   
   // Judges state
   const [judges, setJudges] = useState<Array<{
@@ -218,6 +219,14 @@ function App() {
     setEditingJudge(null);
   };
 
+  // Global error handler (for future use)
+  // const setGlobalErrorHandler = (error: string | null) => {
+  //   setGlobalError(error);
+  //   if (error) {
+  //     setTimeout(() => setGlobalError(null), 10000); // Auto-dismiss after 10 seconds
+  //   }
+  // };
+
   // Fetch assignments for all queues
   const fetchAssignments = async () => {
     try {
@@ -311,6 +320,29 @@ function App() {
           </div>
         </div>
       </nav>
+
+      {/* Global Error Display */}
+      {globalError && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <span className="text-red-400">❌</span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{globalError}</p>
+            </div>
+            <div className="ml-auto pl-3">
+              <button
+                onClick={() => setGlobalError(null)}
+                className="text-red-400 hover:text-red-600"
+              >
+                <span className="sr-only">Dismiss</span>
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
