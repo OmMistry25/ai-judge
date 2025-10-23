@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiltersBar } from './FiltersBar';
 
 interface Evaluation {
   id: string;
@@ -44,8 +45,14 @@ interface ResultsPageProps {
 
 export const ResultsPage: React.FC<ResultsPageProps> = () => {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
+  const [filteredEvaluations, setFilteredEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Filter state
+  const [selectedJudges, setSelectedJudges] = useState<string[]>([]);
+  const [selectedQuestions, setSelectedQuestions] = useState<string[]>([]);
+  const [selectedVerdicts, setSelectedVerdicts] = useState<string[]>([]);
 
   // Fetch all evaluations with joined data
   const fetchEvaluations = async () => {
@@ -70,6 +77,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
         }
 
         setEvaluations(data || []);
+        setFilteredEvaluations(data || []);
       } else {
         throw new Error('Supabase not available');
       }
@@ -79,6 +87,68 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Apply filters to evaluations
+  useEffect(() => {
+    let filtered = evaluations;
+
+    if (selectedJudges.length > 0) {
+      filtered = filtered.filter(e => selectedJudges.includes(e.judge_id));
+    }
+
+    if (selectedQuestions.length > 0) {
+      filtered = filtered.filter(e => selectedQuestions.includes(e.template_id));
+    }
+
+    if (selectedVerdicts.length > 0) {
+      filtered = filtered.filter(e => selectedVerdicts.includes(e.verdict));
+    }
+
+    setFilteredEvaluations(filtered);
+  }, [evaluations, selectedJudges, selectedQuestions, selectedVerdicts]);
+
+  // Generate filter options
+  const getFilterOptions = () => {
+    const judges = Array.from(new Set(evaluations.map(e => e.judge_id)))
+      .map(judgeId => {
+        const judge = evaluations.find(e => e.judge_id === judgeId)?.judge;
+        const count = evaluations.filter(e => e.judge_id === judgeId).length;
+        return {
+          value: judgeId,
+          label: judge?.name || 'Unknown Judge',
+          count
+        };
+      });
+
+    const questions = Array.from(new Set(evaluations.map(e => e.template_id)))
+      .map(templateId => {
+        const question = evaluations.find(e => e.template_id === templateId)?.question;
+        const count = evaluations.filter(e => e.template_id === templateId).length;
+        return {
+          value: templateId,
+          label: question?.question_text || templateId,
+          count
+        };
+      });
+
+    const verdicts = [
+      { value: 'pass', label: 'Pass', count: evaluations.filter(e => e.verdict === 'pass').length },
+      { value: 'fail', label: 'Fail', count: evaluations.filter(e => e.verdict === 'fail').length },
+      { value: 'inconclusive', label: 'Inconclusive', count: evaluations.filter(e => e.verdict === 'inconclusive').length }
+    ];
+
+    return { judges, questions, verdicts };
+  };
+
+  const handleFiltersChange = (filters: {
+    judges: string[];
+    questions: string[];
+    verdicts: string[];
+  }) => {
+    setSelectedJudges(filters.judges);
+    setSelectedQuestions(filters.questions);
+    setSelectedVerdicts(filters.verdicts);
   };
 
   useEffect(() => {
@@ -159,6 +229,8 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
     );
   }
 
+  const filterOptions = getFilterOptions();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -167,7 +239,8 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Evaluation Results</h2>
             <p className="text-gray-600 mt-1">
-              All evaluation results across all queues ({evaluations.length} total)
+              {filteredEvaluations.length} of {evaluations.length} evaluations
+              {filteredEvaluations.length !== evaluations.length && ' (filtered)'}
             </p>
           </div>
           <button
@@ -178,6 +251,17 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
           </button>
         </div>
       </div>
+
+      {/* Filters */}
+      <FiltersBar
+        judges={filterOptions.judges}
+        questions={filterOptions.questions}
+        verdicts={filterOptions.verdicts}
+        selectedJudges={selectedJudges}
+        selectedQuestions={selectedQuestions}
+        selectedVerdicts={selectedVerdicts}
+        onFiltersChange={handleFiltersChange}
+      />
 
       {/* Results Table */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
@@ -206,7 +290,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {evaluations.map((evaluation) => (
+              {filteredEvaluations.map((evaluation) => (
                 <tr key={evaluation.id} className="hover:bg-gray-50">
                   {/* Submission */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -292,24 +376,24 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Summary Statistics</h3>
         <div className="grid grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-gray-900">{evaluations.length}</div>
-            <div className="text-sm text-gray-600">Total Evaluations</div>
+            <div className="text-2xl font-bold text-gray-900">{filteredEvaluations.length}</div>
+            <div className="text-sm text-gray-600">Filtered Evaluations</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-green-600">
-              {evaluations.filter(e => e.verdict === 'pass').length}
+              {filteredEvaluations.filter(e => e.verdict === 'pass').length}
             </div>
             <div className="text-sm text-gray-600">Passed</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-red-600">
-              {evaluations.filter(e => e.verdict === 'fail').length}
+              {filteredEvaluations.filter(e => e.verdict === 'fail').length}
             </div>
             <div className="text-sm text-gray-600">Failed</div>
           </div>
           <div className="text-center">
             <div className="text-2xl font-bold text-yellow-600">
-              {evaluations.filter(e => e.verdict === 'inconclusive').length}
+              {filteredEvaluations.filter(e => e.verdict === 'inconclusive').length}
             </div>
             <div className="text-sm text-gray-600">Inconclusive</div>
           </div>
