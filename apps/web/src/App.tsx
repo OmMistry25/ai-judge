@@ -258,6 +258,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Skip to content link for accessibility */}
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+      
       {/* Header */}
       <nav className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -268,50 +273,50 @@ function App() {
             <div className="flex items-center space-x-4">
               <button 
                 onClick={() => setCurrentPage('home')}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`nav-link ${
                   currentPage === 'home' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:text-gray-900'
+                    ? 'nav-link-active' 
+                    : 'nav-link-inactive'
                 }`}
               >
                 Queues
               </button>
               <button 
                 onClick={() => setCurrentPage('judges')}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`nav-link ${
                   currentPage === 'judges' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:text-gray-900'
+                    ? 'nav-link-active' 
+                    : 'nav-link-inactive'
                 }`}
               >
                 Judges
               </button>
               <button 
                 onClick={() => setCurrentPage('assignments')}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`nav-link ${
                   currentPage === 'assignments' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:text-gray-900'
+                    ? 'nav-link-active' 
+                    : 'nav-link-inactive'
                 }`}
               >
                 Assignments
               </button>
               <button 
                 onClick={() => setCurrentPage('evaluations')}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`nav-link ${
                   currentPage === 'evaluations' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:text-gray-900'
+                    ? 'nav-link-active' 
+                    : 'nav-link-inactive'
                 }`}
               >
                 Evaluations
               </button>
               <button 
                 onClick={() => setCurrentPage('results')}
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                className={`nav-link ${
                   currentPage === 'results' 
-                    ? 'bg-blue-100 text-blue-700' 
-                    : 'text-gray-700 hover:text-gray-900'
+                    ? 'nav-link-active' 
+                    : 'nav-link-inactive'
                 }`}
               >
                 Results
@@ -330,7 +335,7 @@ function App() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-red-700">{globalError}</p>
-            </div>
+      </div>
             <div className="ml-auto pl-3">
               <button
                 onClick={() => setGlobalError(null)}
@@ -338,14 +343,14 @@ function App() {
               >
                 <span className="sr-only">Dismiss</span>
                 ✕
-              </button>
+        </button>
             </div>
           </div>
         </div>
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+      <main id="main-content" className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           {currentPage === 'home' && (
             <div className="space-y-8">
@@ -363,8 +368,8 @@ function App() {
                     </div>
                     <p className="text-sm text-gray-600">
                       Database is ready for submissions and evaluations.
-                    </p>
-                  </div>
+        </p>
+      </div>
                 </div>
               </div>
               

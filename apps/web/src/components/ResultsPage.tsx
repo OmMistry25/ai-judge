@@ -202,18 +202,6 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
     fetchEvaluations();
   }, []);
 
-  const getVerdictColor = (verdict: string) => {
-    switch (verdict) {
-      case 'pass':
-        return 'bg-green-100 text-green-800';
-      case 'fail':
-        return 'bg-red-100 text-red-800';
-      case 'inconclusive':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -392,36 +380,24 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
       </div>
 
       {/* Results Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+      <div className="card overflow-hidden">
+        <div className="table-responsive">
+          <table className="table-mobile">
+            <thead>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Submission
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Question
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Judge
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Verdict
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reasoning
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
+                <th>Submission</th>
+                <th>Question</th>
+                <th>Judge</th>
+                <th>Verdict</th>
+                <th>Reasoning</th>
+                <th>Created</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {filteredEvaluations.map((evaluation) => (
                 <tr key={evaluation.id} className="hover:bg-gray-50">
                   {/* Submission */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td data-label="Submission">
                     <div>
                       <div className="font-medium">{evaluation.submission?.id || 'Unknown'}</div>
                       <div className="text-gray-500 text-xs">
@@ -431,7 +407,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
                   </td>
 
                   {/* Question */}
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs">
+                  <td data-label="Question">
                     <div>
                       <div className="font-medium">{evaluation.question?.template_id || 'Unknown'}</div>
                       <div className="text-gray-500 text-xs mt-1">
@@ -444,7 +420,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
                   </td>
 
                   {/* Judge */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td data-label="Judge">
                     <div>
                       <div className="font-medium">{evaluation.judge?.name || 'Unknown Judge'}</div>
                       <div className="text-gray-500 text-xs">
@@ -454,14 +430,20 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
                   </td>
 
                   {/* Verdict */}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getVerdictColor(evaluation.verdict)}`}>
+                  <td data-label="Verdict">
+                    <span className={`${
+                      evaluation.verdict === 'pass' 
+                        ? 'status-pass'
+                        : evaluation.verdict === 'fail'
+                        ? 'status-fail'
+                        : 'status-inconclusive'
+                    }`}>
                       {evaluation.verdict}
                     </span>
                   </td>
 
                   {/* Reasoning */}
-                  <td className="px-6 py-4 text-sm text-gray-900 max-w-md">
+                  <td data-label="Reasoning">
                     <div className="truncate" title={evaluation.reasoning}>
                       {evaluation.reasoning || 'No reasoning provided'}
                     </div>
@@ -482,7 +464,7 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
                   </td>
 
                   {/* Created */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td data-label="Created" className="text-gray-500">
                     <div>
                       <div>{formatDate(evaluation.created_at)}</div>
                       {evaluation.latency_ms && (
