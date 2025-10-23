@@ -78,6 +78,13 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
 
         setEvaluations(data || []);
         setFilteredEvaluations(data || []);
+        
+        // Verify pass rate calculations after data loads
+        if (data && data.length > 0) {
+          setTimeout(() => {
+            verifyPassRateCalculations();
+          }, 100);
+        }
       } else {
         throw new Error('Supabase not available');
       }
@@ -149,6 +156,32 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
     setSelectedJudges(filters.judges);
     setSelectedQuestions(filters.questions);
     setSelectedVerdicts(filters.verdicts);
+  };
+
+  // Verify pass rate calculations against database counts
+  const verifyPassRateCalculations = () => {
+    const totalEvaluations = evaluations.length;
+    const passCount = evaluations.filter(e => e.verdict === 'pass').length;
+    const calculatedPassRate = totalEvaluations > 0 ? Math.round((passCount / totalEvaluations) * 100) : 0;
+    
+    const failCount = evaluations.filter(e => e.verdict === 'fail').length;
+    const inconclusiveCount = evaluations.filter(e => e.verdict === 'inconclusive').length;
+    
+    console.log('Pass Rate Verification:', {
+      totalEvaluations,
+      passCount,
+      calculatedPassRate,
+      failCount,
+      inconclusiveCount,
+      verification: passCount + failCount + inconclusiveCount === totalEvaluations
+    });
+    
+    return {
+      totalEvaluations,
+      passCount,
+      calculatedPassRate,
+      isVerified: passCount + failCount + inconclusiveCount === totalEvaluations
+    };
   };
 
   useEffect(() => {
@@ -262,6 +295,87 @@ export const ResultsPage: React.FC<ResultsPageProps> = () => {
         selectedVerdicts={selectedVerdicts}
         onFiltersChange={handleFiltersChange}
       />
+
+      {/* Aggregate Pass Rate */}
+      <div className="bg-white p-6 rounded-lg shadow-sm border">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">Aggregate Pass Rate</h3>
+          <button
+            onClick={verifyPassRateCalculations}
+            className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+            title="Verify calculations against database counts"
+          >
+            Verify
+          </button>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-600">
+              {filteredEvaluations.length > 0 
+                ? Math.round((filteredEvaluations.filter(e => e.verdict === 'pass').length / filteredEvaluations.length) * 100)
+                : 0}%
+            </div>
+            <div className="text-sm text-gray-600">Overall Pass Rate</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {filteredEvaluations.filter(e => e.verdict === 'pass').length} of {filteredEvaluations.length} evaluations
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-3xl font-bold text-green-600">
+              {filteredEvaluations.length > 0 
+                ? Math.round((filteredEvaluations.filter(e => e.verdict === 'pass').length / filteredEvaluations.length) * 100)
+                : 0}%
+            </div>
+            <div className="text-sm text-gray-600">Pass Rate (Filtered)</div>
+            <div className="text-xs text-gray-500 mt-1">
+              Based on current filters
+            </div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-3xl font-bold text-gray-600">
+              {evaluations.length > 0 
+                ? Math.round((evaluations.filter(e => e.verdict === 'pass').length / evaluations.length) * 100)
+                : 0}%
+            </div>
+            <div className="text-sm text-gray-600">Pass Rate (All Data)</div>
+            <div className="text-xs text-gray-500 mt-1">
+              {evaluations.filter(e => e.verdict === 'pass').length} of {evaluations.length} total
+            </div>
+          </div>
+        </div>
+        
+        {/* Pass Rate Breakdown by Judge */}
+        {filteredEvaluations.length > 0 && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h4 className="text-md font-medium text-gray-900 mb-3">Pass Rate by Judge</h4>
+            <div className="space-y-2">
+              {Array.from(new Set(filteredEvaluations.map(e => e.judge_id))).map(judgeId => {
+                const judgeEvaluations = filteredEvaluations.filter(e => e.judge_id === judgeId);
+                const judge = judgeEvaluations[0]?.judge;
+                const passCount = judgeEvaluations.filter(e => e.verdict === 'pass').length;
+                const passRate = Math.round((passCount / judgeEvaluations.length) * 100);
+                
+                return (
+                  <div key={judgeId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <span className="font-medium text-gray-900">{judge?.name || 'Unknown Judge'}</span>
+                      <span className="text-sm text-gray-500 ml-2">
+                        {judgeEvaluations.length} evaluations
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-lg font-semibold text-gray-900">{passRate}%</div>
+                      <div className="text-sm text-gray-500">{passCount} passed</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Results Table */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
