@@ -24,3 +24,7 @@ export * from './Breadcrumb';
 export * from './Navigation';
 export * from './ModernHeader';
 export * from './MobileNavigation';
+
+// Typography Components
+export * from './Typography';
+export * from './ContentHierarchy';
