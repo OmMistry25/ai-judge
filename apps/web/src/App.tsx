@@ -384,17 +384,45 @@ function App() {
                     <div className="mt-6">
                       <h4 className="text-md font-medium text-gray-900 mb-3">All Queues:</h4>
                       <div className="space-y-2">
-                        {queues.map((queue) => (
-                          <div key={queue.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-                            <div>
-                              <span className="font-medium text-gray-900">{queue.name}</span>
-                              <span className="ml-2 text-sm text-gray-500">ID: {queue.id}</span>
+                        {queues.map((queue) => {
+                          // Check if this queue has assignments
+                          const queueAssignments = assignments.filter(a => a.queue_id === queue.id);
+                          const hasAssignments = queueAssignments.length > 0;
+                          
+                          return (
+                            <div key={queue.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                              <div>
+                                <span className="font-medium text-gray-900">{queue.name}</span>
+                                <span className="ml-2 text-sm text-gray-500">ID: {queue.id}</span>
+                                {hasAssignments && (
+                                  <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                    {queueAssignments.length} assignments
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center space-x-3">
+                                <span className="text-sm text-gray-500">
+                                  {new Date(queue.createdAt).toLocaleString()}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setSelectedQueueId(queue.id);
+                                    setCurrentPage('evaluations');
+                                  }}
+                                  disabled={!hasAssignments}
+                                  className={`px-3 py-1 text-sm rounded-md font-medium ${
+                                    hasAssignments
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  }`}
+                                  title={hasAssignments ? 'Run AI Judges for this queue' : 'No judge assignments found. Go to Assignment tab to assign judges.'}
+                                >
+                                  {hasAssignments ? 'Run AI Judges' : 'No Assignments'}
+                                </button>
+                              </div>
                             </div>
-                            <span className="text-sm text-gray-500">
-                              {new Date(queue.createdAt).toLocaleString()}
-                            </span>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
