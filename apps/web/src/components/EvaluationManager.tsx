@@ -306,18 +306,38 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
       {/* Queue Selection */}
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Queue for Evaluation</h3>
-        <select
-          value={selectedQueueId}
-          onChange={(e) => setSelectedQueueId(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">Choose a queue...</option>
-          {queues.map((queue) => (
-            <option key={queue.id} value={queue.id}>
-              {queue.name}
-            </option>
-          ))}
-        </select>
+        
+        {queues.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+            <div className="text-gray-600 text-4xl mb-3">📁</div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Queues Available</h3>
+            <p className="text-gray-700 mb-4">
+              You need to create a queue before running evaluations. No queues are currently available in the system.
+            </p>
+            <div className="bg-gray-100 rounded-md p-3 text-sm text-gray-800">
+              <strong>Next steps:</strong>
+              <ol className="list-decimal list-inside mt-2 space-y-1">
+                <li>Go to the <strong>Queues</strong> tab</li>
+                <li>Create a new queue</li>
+                <li>Upload submissions to the queue</li>
+                <li>Return here to run evaluations</li>
+              </ol>
+            </div>
+          </div>
+        ) : (
+          <select
+            value={selectedQueueId}
+            onChange={(e) => setSelectedQueueId(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Choose a queue...</option>
+            {queues.map((queue) => (
+              <option key={queue.id} value={queue.id}>
+                {queue.name}
+              </option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Message Display */}
@@ -349,19 +369,89 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
                 const plan = getEvaluationPlan();
                 const queueAssignments = getQueueAssignments();
                 
+                // Check for no judges
+                if (judges.length === 0) {
+                  return (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+                      <div className="text-red-600 text-4xl mb-3">👨‍⚖️</div>
+                      <h3 className="text-lg font-semibold text-red-800 mb-2">No AI Judges Available</h3>
+                      <p className="text-red-700 mb-4">
+                        You need to create AI judges before running evaluations. No judges are currently available in the system.
+                      </p>
+                      <div className="bg-red-100 rounded-md p-3 text-sm text-red-800">
+                        <strong>Next steps:</strong>
+                        <ol className="list-decimal list-inside mt-2 space-y-1">
+                          <li>Go to the <strong>Judges</strong> tab</li>
+                          <li>Create one or more AI judges</li>
+                          <li>Configure their system prompts</li>
+                          <li>Return here to run evaluations</li>
+                        </ol>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Check for no questions in queue
+                if (questions.length === 0) {
+                  return (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
+                      <div className="text-orange-600 text-4xl mb-3">❓</div>
+                      <h3 className="text-lg font-semibold text-orange-800 mb-2">No Questions Found</h3>
+                      <p className="text-orange-700 mb-4">
+                        This queue doesn't have any questions yet. Questions are automatically created when you upload submissions.
+                      </p>
+                      <div className="bg-orange-100 rounded-md p-3 text-sm text-orange-800">
+                        <strong>Next steps:</strong>
+                        <ol className="list-decimal list-inside mt-2 space-y-1">
+                          <li>Go to the <strong>Queues</strong> tab</li>
+                          <li>Upload JSON submission files with questions</li>
+                          <li>Questions will be automatically parsed</li>
+                          <li>Return here to run evaluations</li>
+                        </ol>
+                      </div>
+                    </div>
+                  );
+                }
+                
                 if (queueAssignments.length === 0) {
                   return (
-                    <p className="text-gray-500">
-                      No judge assignments found for this queue. Go to the Results tab to assign judges to questions.
-                    </p>
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+                      <div className="text-yellow-600 text-4xl mb-3">⚖️</div>
+                      <h3 className="text-lg font-semibold text-yellow-800 mb-2">No Judge Assignments</h3>
+                      <p className="text-yellow-700 mb-4">
+                        This queue doesn't have any judge assignments yet. You need to assign AI judges to questions before running evaluations.
+                      </p>
+                      <div className="bg-yellow-100 rounded-md p-3 text-sm text-yellow-800">
+                        <strong>Next steps:</strong>
+                        <ol className="list-decimal list-inside mt-2 space-y-1">
+                          <li>Go to the <strong>Assignment</strong> tab</li>
+                          <li>Select this queue</li>
+                          <li>Assign judges to questions</li>
+                          <li>Return here to run evaluations</li>
+                        </ol>
+                      </div>
+                    </div>
                   );
                 }
 
                 if (plan.length === 0) {
                   return (
-                    <p className="text-gray-500">
-                      No submissions found in this queue. Upload some submissions first.
-                    </p>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+                      <div className="text-blue-600 text-4xl mb-3">📄</div>
+                      <h3 className="text-lg font-semibold text-blue-800 mb-2">No Submissions Found</h3>
+                      <p className="text-blue-700 mb-4">
+                        This queue doesn't have any submissions yet. You need to upload submissions before running evaluations.
+                      </p>
+                      <div className="bg-blue-100 rounded-md p-3 text-sm text-blue-800">
+                        <strong>Next steps:</strong>
+                        <ol className="list-decimal list-inside mt-2 space-y-1">
+                          <li>Go to the <strong>Queues</strong> tab</li>
+                          <li>Select this queue</li>
+                          <li>Upload JSON submission files</li>
+                          <li>Return here to run evaluations</li>
+                        </ol>
+                      </div>
+                    </div>
                   );
                 }
 
