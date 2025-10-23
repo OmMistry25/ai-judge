@@ -433,30 +433,84 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
                     </div>
                   )}
 
-                  {/* Individual Evaluations */}
+                  {/* Detailed Results Table */}
                   {runEvaluations.length > 0 && (
-                    <div className="space-y-2">
-                      <h5 className="font-medium text-gray-700">Individual Results:</h5>
-                      {runEvaluations.map((evaluation) => (
-                        <div key={evaluation.id} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-md">
-                          <div className="flex items-center space-x-3">
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              evaluation.verdict === 'pass' ? 'bg-green-100 text-green-800' :
-                              evaluation.verdict === 'fail' ? 'bg-red-100 text-red-800' :
-                              'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {evaluation.verdict}
-                            </span>
-                            <span className="text-sm font-medium">{evaluation.judge?.name}</span>
-                            <span className="text-xs text-gray-500">
-                              {evaluation.template_id}
-                            </span>
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {evaluation.latency_ms ? `${evaluation.latency_ms}ms` : 'N/A'}
-                          </div>
+                    <div className="space-y-4">
+                      <h5 className="font-medium text-gray-700">Detailed Results:</h5>
+                      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Judge
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Question
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Verdict
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Reasoning
+                                </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Timing
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              {runEvaluations.map((evaluation) => (
+                                <tr key={evaluation.id} className="hover:bg-gray-50">
+                                  <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                    {evaluation.judge?.name || 'Unknown Judge'}
+                                  </td>
+                                  <td className="px-4 py-4 text-sm text-gray-900">
+                                    {evaluation.template_id}
+                                  </td>
+                                  <td className="px-4 py-4 whitespace-nowrap">
+                                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                                      evaluation.verdict === 'pass' ? 'bg-green-100 text-green-800' :
+                                      evaluation.verdict === 'fail' ? 'bg-red-100 text-red-800' :
+                                      'bg-yellow-100 text-yellow-800'
+                                    }`}>
+                                      {evaluation.verdict}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-4 text-sm text-gray-900 max-w-md">
+                                    <div className="relative">
+                                      <div 
+                                        id={`reasoning-${evaluation.id}`}
+                                        className="truncate" 
+                                        title={evaluation.reasoning}
+                                      >
+                                        {evaluation.reasoning || 'No reasoning provided'}
+                                      </div>
+                                      {evaluation.reasoning && evaluation.reasoning.length > 50 && (
+                                        <button
+                                          className="text-blue-600 hover:text-blue-800 text-xs mt-1"
+                                          onClick={() => {
+                                            // Toggle full reasoning display
+                                            const element = document.getElementById(`reasoning-${evaluation.id}`);
+                                            if (element) {
+                                              element.classList.toggle('truncate');
+                                            }
+                                          }}
+                                        >
+                                          Show full reasoning
+                                        </button>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    {evaluation.latency_ms ? `${evaluation.latency_ms}ms` : 'N/A'}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
-                      ))}
+                      </div>
                     </div>
                   )}
                 </div>
