@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { RunSummary } from './RunSummary';
+import { ToastContainer } from './Toast';
 
 interface Queue {
   id: string;
@@ -88,6 +90,22 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
   const [loading, setLoading] = useState(false);
   const [running, setRunning] = useState(false);
   const [message, setMessage] = useState('');
+  const [toasts, setToasts] = useState<Array<{
+    id: string;
+    message: string;
+    type: 'success' | 'error' | 'warning' | 'info';
+    duration?: number;
+  }>>([]);
+
+  // Toast helper functions
+  const addToast = (message: string, type: 'success' | 'error' | 'warning' | 'info', duration = 5000) => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
 
   // Fetch data for selected queue
   const fetchQueueData = async (queueId: string) => {
@@ -226,13 +244,12 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
 
     const evaluationPlan = getEvaluationPlan();
     if (evaluationPlan.length === 0) {
-      setMessage('❌ No evaluations to run. Make sure you have assignments and submissions.');
-      setTimeout(() => setMessage(''), 3000);
+      addToast('No evaluations to run. Make sure you have assignments and submissions.', 'warning');
       return;
     }
 
     setRunning(true);
-    setMessage(`🚀 Starting evaluation run for ${evaluationPlan.length} evaluations...`);
+    addToast(`Starting evaluation run for ${evaluationPlan.length} evaluations...`, 'info');
 
     try {
       // Call the new run-evaluations Edge Function
@@ -258,15 +275,12 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
       if (result.success && result.summary) {
         const { summary } = result;
         const successRate = summary.successRate || 0;
-        const verdictBreakdown = summary.verdictBreakdown || { pass: 0, fail: 0, inconclusive: 0 };
         
-        setMessage(
-          `✅ Evaluation run completed! ` +
-          `${summary.successfulEvaluations}/${summary.totalEvaluations} successful (${successRate}%). ` +
-          `Pass: ${verdictBreakdown.pass}, Fail: ${verdictBreakdown.fail}, Inconclusive: ${verdictBreakdown.inconclusive}. ` +
-          `Avg latency: ${summary.averageLatency}ms`
+        addToast(
+          `Evaluation completed! ${summary.successfulEvaluations}/${summary.totalEvaluations} successful (${successRate}%)`,
+          'success',
+          8000
         );
-        setTimeout(() => setMessage(''), 10000);
       } else {
         throw new Error(result.error || 'Unknown error occurred');
       }
@@ -276,8 +290,7 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
 
     } catch (error) {
       console.error('Error running evaluations:', error);
-      setMessage(`❌ Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setTimeout(() => setMessage(''), 5000);
+      addToast(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error', 10000);
     } finally {
       setRunning(false);
     }
@@ -415,23 +428,34 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
                     </div>
                   </div>
 
-                  {/* Results Summary */}
-                  {runEvaluations.length > 0 && (
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                      <div className="bg-green-50 p-3 rounded-md text-center">
-                        <div className="text-2xl font-bold text-green-600">{passCount}</div>
-                        <div className="text-sm text-green-700">Pass</div>
-                      </div>
-                      <div className="bg-red-50 p-3 rounded-md text-center">
-                        <div className="text-2xl font-bold text-red-600">{failCount}</div>
-                        <div className="text-sm text-red-700">Fail</div>
-                      </div>
-                      <div className="bg-yellow-50 p-3 rounded-md text-center">
-                        <div className="text-2xl font-bold text-yellow-600">{inconclusiveCount}</div>
-                        <div className="text-sm text-yellow-700">Inconclusive</div>
-                      </div>
-                    </div>
-                  )}
+                  {/* Run Summary Component */}
+                  <RunSummary
+                    run={{
+                      id: run.id,
+                      queueId: run.queue_id,
+                      status: run.completed_count === run.planned_count ? 'completed' : 'running',
+                      planned: run.planned_count,
+                      completed: run.completed_count,
+                      failed: run.failed_count,
+                      createdAt: run.created_at,
+                      completedAt: run.completed_count === run.planned_count ? new Date().toISOString() : undefined
+                    }}
+                    summary={{
+                      totalEvaluations: run.planned_count,
+                      successfulEvaluations: run.completed_count,
+                      failedEvaluations: run.failed_count,
+                      successRate: run.planned_count > 0 ? Math.round((run.completed_count / run.planned_count) * 100) : 0,
+                      averageLatency: runEvaluations.length > 0 ? Math.round(runEvaluations.reduce((sum, e) => sum + (e.latency_ms || 0), 0) / runEvaluations.length) : 0,
+                      totalDuration: 0, // This would need to be calculated from run data
+                      verdictBreakdown: {
+                        pass: passCount,
+                        fail: failCount,
+                        inconclusive: inconclusiveCount
+                      },
+                      judgePerformance: [], // This would need to be calculated from evaluation data
+                      errors: runEvaluations.filter(e => e.error).map(e => e.error!).slice(0, 10)
+                    }}
+                  />
 
                   {/* Detailed Results Table */}
                   {runEvaluations.length > 0 && (
@@ -519,6 +543,9 @@ export function EvaluationManager({ queues, judges, assignments }: EvaluationMan
           </div>
         </div>
       )}
+      
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onRemoveToast={removeToast} />
     </div>
   );
 }
