@@ -33,3 +33,7 @@ export * from './ContentHierarchy';
 export * from './EnhancedForm';
 export * from './FormLayout';
 export * from './FormValidation';
+
+// Table & Data Display Components
+export * from './Table';
+export * from './DataVisualization';
