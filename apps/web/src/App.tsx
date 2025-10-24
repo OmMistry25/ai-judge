@@ -347,53 +347,111 @@ function App() {
                 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-sm font-medium text-gray-500">Total Queues</h3>
-                    <p className="text-2xl font-bold text-gray-900">{queues.length}</p>
+                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-8 rounded-xl shadow-lg border border-blue-200 hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-blue-600 uppercase tracking-wide">Total Queues</h3>
+                        <p className="text-3xl font-bold text-blue-900 mt-2">{queues.length}</p>
+                      </div>
+                      <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-sm font-medium text-gray-500">Active Judges</h3>
-                    <p className="text-2xl font-bold text-gray-900">{judges.filter(j => j.active).length}</p>
+                  
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 p-8 rounded-xl shadow-lg border border-green-200 hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-green-600 uppercase tracking-wide">Active Judges</h3>
+                        <p className="text-3xl font-bold text-green-900 mt-2">{judges.filter(j => j.active).length}</p>
+                      </div>
+                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-sm font-medium text-gray-500">Total Submissions</h3>
-                    <p className="text-2xl font-bold text-gray-900">{submissions.length}</p>
+                  
+                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-8 rounded-xl shadow-lg border border-purple-200 hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-purple-600 uppercase tracking-wide">Total Submissions</h3>
+                        <p className="text-3xl font-bold text-purple-900 mt-2">{submissions.length}</p>
+                      </div>
+                      <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-sm font-medium text-gray-500">Assignments</h3>
-                    <p className="text-2xl font-bold text-gray-900">{assignments.length}</p>
+                  
+                  <div className="bg-gradient-to-br from-orange-50 to-orange-100 p-8 rounded-xl shadow-lg border border-orange-200 hover:shadow-xl transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-semibold text-orange-600 uppercase tracking-wide">Assignments</h3>
+                        <p className="text-3xl font-bold text-orange-900 mt-2">{assignments.length}</p>
+                      </div>
+                      <div className="w-12 h-12 bg-orange-500 rounded-full flex items-center justify-center">
+                        <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                      </div>
+                    </div>
                   </div>
                 </div>
                 
                 {/* Database Status */}
-                <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Database Status</h3>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                    <span className="text-green-700 font-medium">Supabase Connected</span>
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-8 rounded-2xl shadow-lg border border-green-200 mb-8">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center">
+                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+                        </svg>
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-green-900">Database Status</h3>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="text-green-700 font-semibold">Supabase Connected</span>
+                          <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">Ready</span>
+                        </div>
+                        <p className="text-green-600 mt-2">
+                          Database is ready for submissions and evaluations.
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Database is ready for submissions and evaluations.
-                  </p>
                 </div>
                 
                 {/* Queue Management */}
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Queue Management</h3>
+                <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">Queue Management</h3>
+                  </div>
                   
                   {/* Create Queue Form */}
                   <div className="flex space-x-4">
                     <input
                       type="text"
-                      placeholder="Queue name"
+                      placeholder="Enter queue name..."
                       value={queueName}
                       onChange={(e) => setQueueName(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && handleCreateQueue()}
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-lg transition-all duration-200"
                     />
                     <button 
                       onClick={handleCreateQueue}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                       disabled={!queueName.trim()}
                     >
                       Create Queue
@@ -402,23 +460,31 @@ function App() {
                   
                   {/* Message Display */}
                   {message && (
-                    <div className={`p-3 rounded-md ${
+                    <div className={`mt-4 p-4 rounded-xl border-2 ${
                       message.startsWith('✅') 
-                        ? 'bg-green-50 text-green-700 border border-green-200' 
-                        : 'bg-red-50 text-red-700 border border-red-200'
+                        ? 'bg-green-50 text-green-700 border-green-200' 
+                        : 'bg-red-50 text-red-700 border-red-200'
                     }`}>
-                      {message}
+                      <div className="flex items-center space-x-2">
+                        <span className="text-lg">{message.startsWith('✅') ? '✅' : '❌'}</span>
+                        <span className="font-semibold">{message}</span>
+                      </div>
                     </div>
                   )}
                   
                   {/* Queue Selection */}
                   {queues.length > 0 && (
-                    <div className="mt-6">
-                      <h4 className="text-md font-medium text-gray-900 mb-3">Select Queue for Upload:</h4>
+                    <div className="mt-8">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        Select Queue for Upload
+                      </h4>
                       <select
                         value={selectedQueueId}
                         onChange={(e) => setSelectedQueueId(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 text-lg transition-all duration-200"
                       >
                         <option value="">Choose a queue...</option>
                         {queues.map((queue) => (
@@ -432,44 +498,58 @@ function App() {
 
                   {/* Queue List */}
                   {queues.length > 0 && (
-                    <div className="mt-6">
-                      <h4 className="text-md font-medium text-gray-900 mb-3">All Queues:</h4>
-                      <div className="space-y-2">
+                    <div className="mt-8">
+                      <h4 className="text-lg font-semibold text-gray-900 mb-6 flex items-center space-x-2">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        All Queues ({queues.length})
+                      </h4>
+                      <div className="grid gap-4">
                         {queues.map((queue) => {
                           // Check if this queue has assignments
                           const queueAssignments = assignments.filter(a => a.queue_id === queue.id);
                           const hasAssignments = queueAssignments.length > 0;
                           
                           return (
-                            <div key={queue.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-                              <div>
-                                <span className="font-medium text-gray-900">{queue.name}</span>
-                                <span className="ml-2 text-sm text-gray-500">ID: {queue.id}</span>
-                                {hasAssignments && (
-                                  <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                                    {queueAssignments.length} assignments
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center space-x-3">
-                                <span className="text-sm text-gray-500">
-                                  {new Date(queue.createdAt).toLocaleString()}
-                                </span>
-                                <button
-                                  onClick={() => {
-                                    setSelectedQueueId(queue.id);
-                                    setCurrentPage('evaluations');
-                                  }}
-                                  disabled={!hasAssignments}
-                                  className={`px-3 py-1 text-sm rounded-md font-medium ${
-                                    hasAssignments
-                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                  }`}
-                                  title={hasAssignments ? 'Run AI Judges for this queue' : 'No judge assignments found. Go to Assignment tab to assign judges.'}
-                                >
-                                  {hasAssignments ? 'Run AI Judges' : 'No Assignments'}
-                                </button>
+                            <div key={queue.id} className="bg-gradient-to-r from-gray-50 to-gray-100 p-6 rounded-xl border border-gray-200 hover:shadow-lg transition-all duration-300">
+                              <div className="flex justify-between items-center">
+                                <div className="flex-1">
+                                  <div className="flex items-center space-x-3 mb-2">
+                                    <h5 className="text-xl font-bold text-gray-900">{queue.name}</h5>
+                                    {hasAssignments && (
+                                      <span className="px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-full">
+                                        {queueAssignments.length} assignments
+                                      </span>
+                                    )}
+                                    {!hasAssignments && (
+                                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-full">
+                                        No assignments
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-500 mb-2">ID: {queue.id}</p>
+                                  <p className="text-sm text-gray-600">
+                                    Created: {new Date(queue.createdAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <div className="ml-6">
+                                  <button
+                                    onClick={() => {
+                                      setSelectedQueueId(queue.id);
+                                      setCurrentPage('evaluations');
+                                    }}
+                                    disabled={!hasAssignments}
+                                    className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 ${
+                                      hasAssignments
+                                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'
+                                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                    }`}
+                                    title={hasAssignments ? 'Run AI Judges for this queue' : 'No judge assignments found. Go to Assignment tab to assign judges.'}
+                                  >
+                                    {hasAssignments ? 'Run AI Judges' : 'No Assignments'}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           );
@@ -489,18 +569,32 @@ function App() {
 
                 {/* Submissions List */}
                 {submissions.length > 0 && (
-                  <div className="bg-white p-6 rounded-lg shadow-sm border">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Uploaded Submissions</h3>
-                    <div className="space-y-2">
+                  <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200">
+                    <div className="flex items-center space-x-3 mb-6">
+                      <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
+                        </svg>
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">Uploaded Submissions</h3>
+                      <span className="px-3 py-1 bg-purple-100 text-purple-800 text-sm font-semibold rounded-full">
+                        {submissions.length}
+                      </span>
+                    </div>
+                    <div className="grid gap-4">
                       {submissions.map((submission) => (
-                        <div key={submission.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
-                          <div>
-                            <span className="font-medium text-gray-900">{submission.id}</span>
-                            <span className="ml-2 text-sm text-gray-500">Queue: {submission.queueId}</span>
+                        <div key={submission.id} className="bg-gradient-to-r from-purple-50 to-purple-100 p-6 rounded-xl border border-purple-200 hover:shadow-lg transition-all duration-300">
+                          <div className="flex justify-between items-center">
+                            <div className="flex-1">
+                              <h5 className="text-lg font-bold text-gray-900 mb-1">{submission.id}</h5>
+                              <p className="text-sm text-gray-600">Queue: {submission.queueId}</p>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-sm text-gray-500">
+                                {new Date(submission.uploadedAt).toLocaleString()}
+                              </span>
+                            </div>
                           </div>
-                          <span className="text-sm text-gray-500">
-                            {new Date(submission.uploadedAt).toLocaleString()}
-                          </span>
                         </div>
                       ))}
                     </div>
@@ -513,14 +607,17 @@ function App() {
           {currentPage === 'judges' && (
             <div className="space-y-8">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">AI Judges</h2>
-                <p className="text-gray-600 mb-6">Create and manage AI judges for evaluating submissions.</p>
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">AI Judges</h2>
+                <p className="text-lg text-gray-600 mb-8">Create and manage AI judges for evaluating submissions.</p>
                 
                 {!showJudgeForm && (
                   <button
                     onClick={() => setShowJudgeForm(true)}
-                    className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="mb-8 px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl hover:from-blue-700 hover:to-blue-800 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                   >
+                    <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
                     Create New Judge
                   </button>
                 )}
