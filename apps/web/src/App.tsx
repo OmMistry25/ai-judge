@@ -6,18 +6,6 @@ import { AssignmentManager } from './components/AssignmentManager';
 import { EvaluationManager } from './components/EvaluationManager';
 import { ResultsPage } from './components/ResultsPage';
 
-// Import design system components
-import { 
-  ModernHeader, 
-  AnalyticsDashboardLayout, 
-  DashboardGrid, 
-  DashboardWidget,
-  StatsOverview,
-  Button,
-  Card,
-  Badge
-} from './design-system/components';
-
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [queueName, setQueueName] = useState('');
@@ -231,14 +219,6 @@ function App() {
     setEditingJudge(null);
   };
 
-  // Global error handler (for future use)
-  // const setGlobalErrorHandler = (error: string | null) => {
-  //   setGlobalError(error);
-  //   if (error) {
-  //     setTimeout(() => setGlobalError(null), 10000); // Auto-dismiss after 10 seconds
-  //   }
-  // };
-
   // Fetch assignments for all queues
   const fetchAssignments = async () => {
     try {
@@ -269,63 +249,73 @@ function App() {
   }, []);
 
   return (
-    <AnalyticsDashboardLayout
-      header={
-        <ModernHeader
-          title="AI Judge"
-          navigation={[
-            { label: 'Queues', href: '#', active: currentPage === 'home' },
-            { label: 'Judges', href: '#', active: currentPage === 'judges' },
-            { label: 'Assignments', href: '#', active: currentPage === 'assignments' },
-            { label: 'Evaluations', href: '#', active: currentPage === 'evaluations' },
-            { label: 'Results', href: '#', active: currentPage === 'results' },
-          ]}
-          actions={
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <nav className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <h1 className="text-xl font-semibold text-gray-900">AI Judge</h1>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button 
                 onClick={() => setCurrentPage('home')}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'home' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Queues
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button 
                 onClick={() => setCurrentPage('judges')}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'judges' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Judges
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button 
                 onClick={() => setCurrentPage('assignments')}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'assignments' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Assignments
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button 
                 onClick={() => setCurrentPage('evaluations')}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'evaluations' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Evaluations
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
+              </button>
+              <button 
                 onClick={() => setCurrentPage('results')}
+                className={`px-3 py-2 rounded-md text-sm font-medium ${
+                  currentPage === 'results' 
+                    ? 'bg-blue-100 text-blue-700' 
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
               >
                 Results
-              </Button>
+              </button>
             </div>
-          }
-        />
-      }
-    >
+          </div>
+        </div>
+      </nav>
 
       {/* Global Error Display */}
       {globalError && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+        <div className="bg-red-50 border-l-4 border-red-400 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
               <span className="text-red-400">❌</span>
@@ -347,302 +337,258 @@ function App() {
       )}
 
       {/* Main Content */}
-      {currentPage === 'home' && (
-        <div className="space-y-8">
-          {/* Dashboard Overview */}
-      <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Judge Dashboard</h1>
-            <p className="text-lg text-gray-600 mb-8">Upload and manage submission queues with AI-powered evaluation.</p>
-            
-            {/* Stats Overview */}
-            <StatsOverview
-              stats={[
-                {
-                  title: 'Total Queues',
-                  value: queues.length,
-                  change: { value: 0, type: 'neutral' },
-                  color: 'blue'
-                },
-                {
-                  title: 'Active Judges',
-                  value: judges.filter(j => j.active).length,
-                  change: { value: 0, type: 'neutral' },
-                  color: 'green'
-                },
-                {
-                  title: 'Total Submissions',
-                  value: submissions.length,
-                  change: { value: 0, type: 'neutral' },
-                  color: 'purple'
-                },
-                {
-                  title: 'Assignments',
-                  value: assignments.length,
-                  change: { value: 0, type: 'neutral' },
-                  color: 'yellow'
-                }
-              ]}
-              className="mb-8"
-            />
-          </div>
-
-          {/* Database Status */}
-          <DashboardWidget
-            title="Database Status"
-            subtitle="Connection and system health"
-          >
-            <div className="flex items-center space-x-3">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-              <span className="text-green-700 font-medium">Supabase Connected</span>
-              <Badge variant="success" size="sm">Ready</Badge>
-      </div>
-            <p className="text-sm text-gray-600 mt-2">
-              Database is ready for submissions and evaluations.
-            </p>
-          </DashboardWidget>
-          
-          {/* Queue Management */}
-          <DashboardWidget
-            title="Queue Management"
-            subtitle="Create and manage submission queues"
-          >
-            <div className="space-y-6">
-              {/* Create Queue Form */}
-              <div className="flex space-x-4">
-                <input
-                  type="text"
-                  placeholder="Enter queue name..."
-                  value={queueName}
-                  onChange={(e) => setQueueName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateQueue()}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
-                />
-                <Button 
-                  onClick={handleCreateQueue}
-                  disabled={!queueName.trim()}
-                  size="lg"
-                >
-                  Create Queue
-                </Button>
-              </div>
-              
-              {/* Message Display */}
-              {message && (
-                <div className={`p-4 rounded-lg border ${
-                  message.startsWith('✅') 
-                    ? 'bg-green-50 text-green-700 border-green-200' 
-                    : 'bg-red-50 text-red-700 border-red-200'
-                }`}>
-                  <div className="flex items-center">
-                    <span className="text-lg mr-2">{message.startsWith('✅') ? '✅' : '❌'}</span>
-                    <span className="font-medium">{message}</span>
+      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <div className="px-4 py-6 sm:px-0">
+          {currentPage === 'home' && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">AI Judge Dashboard</h2>
+                <p className="text-gray-600 mb-6">Upload and manage submission queues.</p>
+                
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <h3 className="text-sm font-medium text-gray-500">Total Queues</h3>
+                    <p className="text-2xl font-bold text-gray-900">{queues.length}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <h3 className="text-sm font-medium text-gray-500">Active Judges</h3>
+                    <p className="text-2xl font-bold text-gray-900">{judges.filter(j => j.active).length}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <h3 className="text-sm font-medium text-gray-500">Total Submissions</h3>
+                    <p className="text-2xl font-bold text-gray-900">{submissions.length}</p>
+                  </div>
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <h3 className="text-sm font-medium text-gray-500">Assignments</h3>
+                    <p className="text-2xl font-bold text-gray-900">{assignments.length}</p>
                   </div>
                 </div>
-              )}
-              
-              {/* Queue Selection */}
-              {queues.length > 0 && (
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-3">Select Queue for Upload</h4>
-                  <select
-                    value={selectedQueueId}
-                    onChange={(e) => setSelectedQueueId(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg"
-                  >
-                    <option value="">Choose a queue...</option>
-                    {queues.map((queue) => (
-                      <option key={queue.id} value={queue.id}>
-                        {queue.name} (ID: {queue.id})
-                      </option>
-                    ))}
-                  </select>
+                
+                {/* Database Status */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border mb-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Database Status</h3>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <span className="text-green-700 font-medium">Supabase Connected</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Database is ready for submissions and evaluations.
+                  </p>
                 </div>
-              )}
+                
+                {/* Queue Management */}
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Queue Management</h3>
+                  
+                  {/* Create Queue Form */}
+                  <div className="flex space-x-4">
+                    <input
+                      type="text"
+                      placeholder="Queue name"
+                      value={queueName}
+                      onChange={(e) => setQueueName(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleCreateQueue()}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button 
+                      onClick={handleCreateQueue}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                      disabled={!queueName.trim()}
+                    >
+                      Create Queue
+                    </button>
+                  </div>
+                  
+                  {/* Message Display */}
+                  {message && (
+                    <div className={`p-3 rounded-md ${
+                      message.startsWith('✅') 
+                        ? 'bg-green-50 text-green-700 border border-green-200' 
+                        : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {message}
+                    </div>
+                  )}
+                  
+                  {/* Queue Selection */}
+                  {queues.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="text-md font-medium text-gray-900 mb-3">Select Queue for Upload:</h4>
+                      <select
+                        value={selectedQueueId}
+                        onChange={(e) => setSelectedQueueId(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Choose a queue...</option>
+                        {queues.map((queue) => (
+                          <option key={queue.id} value={queue.id}>
+                            {queue.name} (ID: {queue.id})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-              {/* Queue List */}
-              {queues.length > 0 && (
-                <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">All Queues ({queues.length})</h4>
-                  <DashboardGrid columns={1} gap="md">
-                    {queues.map((queue) => {
-                      // Check if this queue has assignments
-                      const queueAssignments = assignments.filter(a => a.queue_id === queue.id);
-                      const hasAssignments = queueAssignments.length > 0;
-                      
-                      return (
-                        <Card key={queue.id} className="p-6">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h5 className="text-lg font-semibold text-gray-900 mb-2">{queue.name}</h5>
-                              <p className="text-sm text-gray-500 mb-3">ID: {queue.id}</p>
-                              <div className="flex items-center space-x-4">
-                                <span className="text-sm text-gray-500">
-                                  Created: {new Date(queue.createdAt).toLocaleDateString()}
-                                </span>
+                  {/* Queue List */}
+                  {queues.length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="text-md font-medium text-gray-900 mb-3">All Queues:</h4>
+                      <div className="space-y-2">
+                        {queues.map((queue) => {
+                          // Check if this queue has assignments
+                          const queueAssignments = assignments.filter(a => a.queue_id === queue.id);
+                          const hasAssignments = queueAssignments.length > 0;
+                          
+                          return (
+                            <div key={queue.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                              <div>
+                                <span className="font-medium text-gray-900">{queue.name}</span>
+                                <span className="ml-2 text-sm text-gray-500">ID: {queue.id}</span>
                                 {hasAssignments && (
-                                  <Badge variant="success" size="sm">
+                                  <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
                                     {queueAssignments.length} assignments
-                                  </Badge>
-                                )}
-                                {!hasAssignments && (
-                                  <Badge variant="warning" size="sm">
-                                    No assignments
-                                  </Badge>
+                                  </span>
                                 )}
                               </div>
+                              <div className="flex items-center space-x-3">
+                                <span className="text-sm text-gray-500">
+                                  {new Date(queue.createdAt).toLocaleString()}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setSelectedQueueId(queue.id);
+                                    setCurrentPage('evaluations');
+                                  }}
+                                  disabled={!hasAssignments}
+                                  className={`px-3 py-1 text-sm rounded-md font-medium ${
+                                    hasAssignments
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                  }`}
+                                  title={hasAssignments ? 'Run AI Judges for this queue' : 'No judge assignments found. Go to Assignment tab to assign judges.'}
+                                >
+                                  {hasAssignments ? 'Run AI Judges' : 'No Assignments'}
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center space-x-3">
-                              <Button
-                                onClick={() => {
-                                  setSelectedQueueId(queue.id);
-                                  setCurrentPage('evaluations');
-                                }}
-                                disabled={!hasAssignments}
-                                variant={hasAssignments ? 'primary' : 'secondary'}
-                                size="sm"
-                              >
-                                {hasAssignments ? 'Run AI Judges' : 'No Assignments'}
-                              </Button>
-                            </div>
-                          </div>
-                        </Card>
-                      );
-                    })}
-                  </DashboardGrid>
-                </div>
-              )}
-            </div>
-          </DashboardWidget>
-
-          {/* File Upload Section */}
-          {selectedQueueId && (
-            <DashboardWidget
-              title="Upload Submissions"
-              subtitle="Upload JSON files to the selected queue"
-            >
-              <FileUpload 
-                queueId={selectedQueueId} 
-                onUploadSuccess={handleUploadSuccess}
-              />
-            </DashboardWidget>
-          )}
-
-          {/* Submissions List */}
-          {submissions.length > 0 && (
-            <DashboardWidget
-              title="Uploaded Submissions"
-              subtitle={`${submissions.length} submissions uploaded`}
-            >
-              <DashboardGrid columns={1} gap="sm">
-                {submissions.map((submission) => (
-                  <Card key={submission.id} className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h5 className="font-semibold text-gray-900">{submission.id}</h5>
-                        <p className="text-sm text-gray-500">Queue: {submission.queueId}</p>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-sm text-gray-500">
-                          {new Date(submission.uploadedAt).toLocaleString()}
-                        </span>
+                          );
+                        })}
                       </div>
                     </div>
-                  </Card>
-                ))}
-              </DashboardGrid>
-            </DashboardWidget>
-          )}
-        </div>
-      )}
-      
-      {currentPage === 'judges' && (
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Judges</h1>
-            <p className="text-lg text-gray-600 mb-8">Create and manage AI judges for evaluating submissions.</p>
-            
-            {!showJudgeForm && (
-              <Button
-                onClick={() => setShowJudgeForm(true)}
-                size="lg"
-                className="mb-8"
-              >
-                Create New Judge
-              </Button>
-            )}
-          </div>
+                  )}
+                </div>
 
-          {showJudgeForm && (
-            <DashboardWidget
-              title={editingJudge ? 'Edit AI Judge' : 'Create New AI Judge'}
-              subtitle="Configure judge settings and prompts"
-            >
-              <JudgeForm
-                judge={editingJudge || undefined}
-                onSubmit={editingJudge ? handleEditJudge : handleCreateJudge}
-                onCancel={handleCancelJudgeForm}
-                isLoading={judgesLoading}
-              />
-            </DashboardWidget>
-          )}
+                {/* File Upload Section */}
+                {selectedQueueId && (
+                  <FileUpload 
+                    queueId={selectedQueueId} 
+                    onUploadSuccess={handleUploadSuccess}
+                  />
+                )}
 
-          {!showJudgeForm && (
-            <DashboardWidget
-              title="AI Judges"
-              subtitle={`${judges.length} judges configured`}
-            >
-              <JudgeList
+                {/* Submissions List */}
+                {submissions.length > 0 && (
+                  <div className="bg-white p-6 rounded-lg shadow-sm border">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4">Uploaded Submissions</h3>
+                    <div className="space-y-2">
+                      {submissions.map((submission) => (
+                        <div key={submission.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                          <div>
+                            <span className="font-medium text-gray-900">{submission.id}</span>
+                            <span className="ml-2 text-sm text-gray-500">Queue: {submission.queueId}</span>
+                          </div>
+                          <span className="text-sm text-gray-500">
+                            {new Date(submission.uploadedAt).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {currentPage === 'judges' && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">AI Judges</h2>
+                <p className="text-gray-600 mb-6">Create and manage AI judges for evaluating submissions.</p>
+                
+                {!showJudgeForm && (
+                  <button
+                    onClick={() => setShowJudgeForm(true)}
+                    className="mb-6 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Create New Judge
+                  </button>
+                )}
+              </div>
+
+              {showJudgeForm && (
+                <JudgeForm
+                  judge={editingJudge || undefined}
+                  onSubmit={editingJudge ? handleEditJudge : handleCreateJudge}
+                  onCancel={handleCancelJudgeForm}
+                  isLoading={judgesLoading}
+                />
+              )}
+
+              {!showJudgeForm && (
+                <JudgeList
+                  judges={judges}
+                  onEdit={handleEditJudgeClick}
+                  onDelete={handleDeleteJudge}
+                  isLoading={judgesLoading}
+                />
+              )}
+            </div>
+          )}
+          
+          {currentPage === 'assignments' && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Judge Assignments</h2>
+                <p className="text-gray-600 mb-6">Assign AI judges to evaluate specific questions in your queues.</p>
+              </div>
+
+              <AssignmentManager
+                queues={queues}
                 judges={judges}
-                onEdit={handleEditJudgeClick}
-                onDelete={handleDeleteJudge}
-                isLoading={judgesLoading}
+                onAssignmentChange={fetchAssignments}
               />
-            </DashboardWidget>
+            </div>
+          )}
+          
+          {currentPage === 'results' && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Evaluation Results</h2>
+                <p className="text-gray-600 mb-6">View all evaluation results across all queues with detailed analysis.</p>
+              </div>
+
+              <ResultsPage />
+            </div>
+          )}
+          
+          {currentPage === 'evaluations' && (
+            <div className="space-y-8">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Run Evaluations</h2>
+                <p className="text-gray-600 mb-6">Execute AI judge evaluations on assigned questions and view results.</p>
+              </div>
+
+              <EvaluationManager
+                queues={queues}
+                judges={judges}
+                assignments={assignments}
+              />
+            </div>
           )}
         </div>
-      )}
-      
-      {currentPage === 'assignments' && (
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Judge Assignments</h1>
-            <p className="text-lg text-gray-600 mb-8">Assign AI judges to evaluate specific questions in your queues.</p>
-          </div>
-
-          <AssignmentManager
-            queues={queues}
-            judges={judges}
-            onAssignmentChange={fetchAssignments}
-          />
-        </div>
-      )}
-      
-      {currentPage === 'results' && (
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Evaluation Results</h1>
-            <p className="text-lg text-gray-600 mb-8">View all evaluation results across all queues with detailed analysis.</p>
-          </div>
-
-          <ResultsPage />
-        </div>
-      )}
-      
-      {currentPage === 'evaluations' && (
-        <div className="space-y-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Run Evaluations</h1>
-            <p className="text-lg text-gray-600 mb-8">Execute AI judge evaluations on assigned questions and view results.</p>
-          </div>
-
-          <EvaluationManager
-            queues={queues}
-            judges={judges}
-            assignments={assignments}
-          />
-      </div>
-      )}
-    </AnalyticsDashboardLayout>
+      </main>
+    </div>
   );
 }
 
