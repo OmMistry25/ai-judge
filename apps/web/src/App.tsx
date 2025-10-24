@@ -350,7 +350,7 @@ function App() {
       {currentPage === 'home' && (
         <div className="space-y-8">
           {/* Dashboard Overview */}
-          <div>
+      <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">AI Judge Dashboard</h1>
             <p className="text-lg text-gray-600 mb-8">Upload and manage submission queues with AI-powered evaluation.</p>
             
@@ -395,7 +395,7 @@ function App() {
               <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
               <span className="text-green-700 font-medium">Supabase Connected</span>
               <Badge variant="success" size="sm">Ready</Badge>
-            </div>
+      </div>
             <p className="text-sm text-gray-600 mt-2">
               Database is ready for submissions and evaluations.
             </p>
@@ -640,7 +640,7 @@ function App() {
             judges={judges}
             assignments={assignments}
           />
-        </div>
+      </div>
       )}
     </AnalyticsDashboardLayout>
   );
