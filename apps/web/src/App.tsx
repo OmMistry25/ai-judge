@@ -339,7 +339,6 @@ function App() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          <>
           {currentPage === 'home' && (
             <div className="space-y-8">
               <div>
@@ -684,7 +683,6 @@ function App() {
               />
             </div>
           )}
-          </>
         </div>
       </main>
     </div>
