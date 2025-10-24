@@ -16,7 +16,7 @@ import {
   Button,
   Card,
   Badge
-} from './design-system';
+} from './design-system/components';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
